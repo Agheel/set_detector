@@ -1,0 +1,14 @@
+FROM python:3.11-slim
+
+WORKDIR /app
+
+# 정적 분석, 보안, 단위 테스트, 커버리지 패키지 설치
+RUN pip install --no-cache-dir \
+    flake8 \
+    bandit \
+    pytest \
+    pytest-cov \
+    semgrep
+
+# 실행 시 검증 스크립트 수동/자동 수행
+CMD ["/bin/bash", "./harness-check.sh"]
