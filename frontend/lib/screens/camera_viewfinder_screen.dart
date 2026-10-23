@@ -450,7 +450,7 @@ class _CloudSettingsAndScenarioSheetState
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               const Text(
-                '클라우드 YOLO 백엔드 연결 설정',
+                'Hugging Face Spaces 클라우드 백엔드 설정',
                 style: TextStyle(
                   fontSize: 16,
                   fontWeight: FontWeight.w700,
@@ -459,7 +459,7 @@ class _CloudSettingsAndScenarioSheetState
               ),
               const SizedBox(height: 6),
               const Text(
-                'Cloud Run / Railway 배포 주소 또는 동일 Wi-Fi PC 서버 주소(예: https://set-detector-api.a.run.app)를 입력하세요.',
+                'Hugging Face Spaces 무료 Docker 배포 주소(예: https://id-set-detector.hf.space) 또는 로컬 서버 주소를 입력하세요.',
                 style: TextStyle(
                   fontSize: 12,
                   color: SetColors.textSecondary,
@@ -476,7 +476,7 @@ class _CloudSettingsAndScenarioSheetState
                 decoration: InputDecoration(
                   filled: true,
                   fillColor: SetColors.bgSlate900,
-                  hintText: 'https://set-detector-api-xxx.a.run.app',
+                  hintText: 'https://username-set-detector.hf.space',
                   errorText: _validationError,
                   border: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(12),
