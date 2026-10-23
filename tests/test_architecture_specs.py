@@ -141,3 +141,27 @@ def test_nfr02_solver_performance_under_5ms() -> None:
     assert elapsed_ms < 5.0
     assert isinstance(sets, list)
     assert SetDetectionResult is not None
+
+
+def test_hf_gradio_space_entrypoint() -> None:
+    """Verify Hugging Face Spaces Gradio SDK entry point (backend/app.py)."""
+    import app as space_entry
+
+    img_none, err_dict = space_entry.gradio_predict(None)
+    assert img_none is None
+    assert "error" in err_dict
+
+    valid_img = np.zeros((100, 100, 3), dtype=np.uint8)
+    annot_img, res_dict = space_entry.gradio_predict(valid_img)
+    assert annot_img is not None
+    assert res_dict["card_count"] == 12
+
+    with patch.dict("os.environ", {"GRADIO_SERVER_PORT": "7860"}):
+        assert space_entry.get_space_port() == 7860
+
+    with patch.dict("os.environ", {"GRADIO_SERVER_PORT": "invalid"}):
+        assert space_entry.get_space_port() == 7860
+
+    with patch("uvicorn.run") as mock_run:
+        space_entry.main()
+        mock_run.assert_called_once()
