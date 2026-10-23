@@ -1,0 +1,10 @@
+services:
+  - type: web
+    name: set-detector-api
+    runtime: docker
+    dockerfilePath: ./backend/Dockerfile
+    dockerContext: ./backend
+    healthCheckPath: /health
+    envVars:
+      - key: PORT
+        value: 8000

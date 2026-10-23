@@ -1,10 +1,31 @@
 import 'dart:convert';
 import 'dart:typed_data';
+import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 import '../models/set_models.dart';
 
+@immutable
+class BackendHealthStatus {
+  final bool isConnected;
+  final String detectorName;
+  final bool weightsLoaded;
+  final String serverUrl;
+  final String? errorMessage;
+
+  const BackendHealthStatus({
+    required this.isConnected,
+    required this.detectorName,
+    required this.weightsLoaded,
+    required this.serverUrl,
+    this.errorMessage,
+  });
+}
+
 /// Interface for SET detection & solving backend integration (DIP & ISP).
 abstract class ISetApiClient {
+  String get baseUrl;
+  void updateBaseUrl(String newUrl);
+  Future<BackendHealthStatus> checkHealth();
   Future<DetectionResultData> detectImage(Uint8List imageBytes, {String filename});
   Future<List<SetCombinationItem>> solveCards(List<SetCard> cards);
 }
@@ -41,20 +62,86 @@ class OfflineSetSolver {
   }
 }
 
-/// Security-first HTTP client connecting to FastAPI SET Detection Backend.
+/// Security-first HTTP client connecting to Cloud Run / Railway / Local FastAPI Backend.
 class HttpSetApiClient implements ISetApiClient {
   static const int maxUploadBytes = 5 * 1024 * 1024; // 5MB security limit
+  static const String defaultCloudUrl =
+      String.fromEnvironment('SET_API_BASE_URL', defaultValue: 'http://127.0.0.1:8000');
 
-  final String baseUrl;
+  String _baseUrl;
   final http.Client _client;
   final OfflineSetSolver _offlineSolver;
 
   HttpSetApiClient({
-    this.baseUrl = 'http://127.0.0.1:8000',
+    String? baseUrl,
     http.Client? client,
     OfflineSetSolver offlineSolver = const OfflineSetSolver(),
-  })  : _client = client ?? http.Client(),
+  })  : _baseUrl = validateAndNormalizeUrl(baseUrl ?? defaultCloudUrl),
+        _client = client ?? http.Client(),
         _offlineSolver = offlineSolver;
+
+  @override
+  String get baseUrl => _baseUrl;
+
+  /// Security validation for user-entered server URL (prevents scheme injection & malformed hosts).
+  static String validateAndNormalizeUrl(String rawUrl) {
+    final trimmed = rawUrl.trim();
+    if (trimmed.isEmpty) {
+      throw const FormatException('서버 주소를 입력해주세요.');
+    }
+    final uri = Uri.tryParse(trimmed);
+    if (uri == null || !uri.hasScheme || !uri.hasAuthority) {
+      throw const FormatException('올바른 URL 형식이 아닙니다. (예: https://set-api.a.run.app)');
+    }
+    final scheme = uri.scheme.toLowerCase();
+    if (scheme != 'http' && scheme != 'https') {
+      throw const FormatException('보안상 http:// 또는 https:// 프로토콜만 허용됩니다.');
+    }
+    if (uri.host.isEmpty) {
+      throw const FormatException('유효한 호스트명이 필요합니다.');
+    }
+    final normalized = uri.toString();
+    return normalized.endsWith('/')
+        ? normalized.substring(0, normalized.length - 1)
+        : normalized;
+  }
+
+  @override
+  void updateBaseUrl(String newUrl) {
+    _baseUrl = validateAndNormalizeUrl(newUrl);
+  }
+
+  @override
+  Future<BackendHealthStatus> checkHealth() async {
+    try {
+      final uri = Uri.parse('$_baseUrl/health');
+      final response = await _client.get(uri).timeout(const Duration(seconds: 5));
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body) as Map<String, dynamic>;
+        return BackendHealthStatus(
+          isConnected: true,
+          detectorName: (data['detector'] ?? 'Unknown').toString(),
+          weightsLoaded: data['weights_loaded'] == true,
+          serverUrl: _baseUrl,
+        );
+      }
+      return BackendHealthStatus(
+        isConnected: false,
+        detectorName: 'Disconnected',
+        weightsLoaded: false,
+        serverUrl: _baseUrl,
+        errorMessage: 'HTTP ${response.statusCode}',
+      );
+    } catch (e) {
+      return BackendHealthStatus(
+        isConnected: false,
+        detectorName: 'Offline',
+        weightsLoaded: false,
+        serverUrl: _baseUrl,
+        errorMessage: e.toString(),
+      );
+    }
+  }
 
   void _validatePayloadSecurity(Uint8List bytes) {
     if (bytes.isEmpty) {
@@ -72,7 +159,7 @@ class HttpSetApiClient implements ISetApiClient {
   }) async {
     _validatePayloadSecurity(imageBytes);
 
-    final uri = Uri.parse('$baseUrl/api/v1/detect');
+    final uri = Uri.parse('$_baseUrl/api/v1/detect');
     final request = http.MultipartRequest('POST', uri)
       ..files.add(
         http.MultipartFile.fromBytes(
@@ -98,7 +185,7 @@ class HttpSetApiClient implements ISetApiClient {
   @override
   Future<List<SetCombinationItem>> solveCards(List<SetCard> cards) async {
     try {
-      final uri = Uri.parse('$baseUrl/api/v1/solve');
+      final uri = Uri.parse('$_baseUrl/api/v1/solve');
       final response = await _client
           .post(
             uri,

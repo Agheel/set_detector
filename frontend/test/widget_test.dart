@@ -17,7 +17,24 @@ void main() {
     expect(sets.first.formattedReference, '01 · 02 · 03');
   });
 
-  testWidgets('SetDetectorApp navigates from Onboarding (01) to Camera (02) and Result (03)',
+  test('HttpSetApiClient validates and normalizes Cloud Run / Railway URLs', () {
+    final client = HttpSetApiClient(baseUrl: 'https://set-detector-api.a.run.app/');
+    expect(client.baseUrl, 'https://set-detector-api.a.run.app');
+
+    client.updateBaseUrl('https://set-detector.up.railway.app/');
+    expect(client.baseUrl, 'https://set-detector.up.railway.app');
+
+    expect(
+      () => client.updateBaseUrl('javascript:alert(1)'),
+      throwsA(isA<FormatException>()),
+    );
+    expect(
+      () => client.updateBaseUrl(''),
+      throwsA(isA<FormatException>()),
+    );
+  });
+
+  testWidgets('SetDetectorApp navigates from Onboarding (01) to Camera (02)',
       (WidgetTester tester) async {
     await tester.pumpWidget(const SetDetectorApp());
 
