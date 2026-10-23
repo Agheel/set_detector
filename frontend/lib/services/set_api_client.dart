@@ -25,8 +25,13 @@ class BackendHealthStatus {
 abstract class ISetApiClient {
   String get baseUrl;
   void updateBaseUrl(String newUrl);
+  Future<void> warmUpConnection();
   Future<BackendHealthStatus> checkHealth();
-  Future<DetectionResultData> detectImage(Uint8List imageBytes, {String filename});
+  Future<DetectionResultData> detectImage(
+    Uint8List imageBytes, {
+    String filename,
+    bool includeBase64,
+  });
   Future<List<SetCombinationItem>> solveCards(List<SetCard> cards);
 }
 
@@ -112,10 +117,32 @@ class HttpSetApiClient implements ISetApiClient {
   }
 
   @override
+  Future<void> warmUpConnection() async {
+    try {
+      final uri = Uri.parse('$_baseUrl/health');
+      await _client.get(
+        uri,
+        headers: const {
+          'Connection': 'keep-alive',
+          'Accept-Encoding': 'gzip',
+        },
+      ).timeout(const Duration(seconds: 4));
+    } catch (_) {
+      // Pre-connect warm-up is non-blocking; ignore errors silently.
+    }
+  }
+
+  @override
   Future<BackendHealthStatus> checkHealth() async {
     try {
       final uri = Uri.parse('$_baseUrl/health');
-      final response = await _client.get(uri).timeout(const Duration(seconds: 5));
+      final response = await _client.get(
+        uri,
+        headers: const {
+          'Connection': 'keep-alive',
+          'Accept-Encoding': 'gzip',
+        },
+      ).timeout(const Duration(seconds: 5));
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body) as Map<String, dynamic>;
         return BackendHealthStatus(
@@ -156,11 +183,16 @@ class HttpSetApiClient implements ISetApiClient {
   Future<DetectionResultData> detectImage(
     Uint8List imageBytes, {
     String filename = 'capture.jpg',
+    bool includeBase64 = false,
   }) async {
     _validatePayloadSecurity(imageBytes);
 
-    final uri = Uri.parse('$_baseUrl/api/v1/detect');
+    final uri = Uri.parse(
+      '$_baseUrl/api/v1/detect?include_base64=${includeBase64 ? "true" : "false"}',
+    );
     final request = http.MultipartRequest('POST', uri)
+      ..headers['Connection'] = 'keep-alive'
+      ..headers['Accept-Encoding'] = 'gzip'
       ..files.add(
         http.MultipartFile.fromBytes(
           'file',

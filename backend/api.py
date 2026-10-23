@@ -6,6 +6,7 @@ from typing import Any, Dict, List
 import cv2
 from fastapi import FastAPI, File, HTTPException, Query, UploadFile, status
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.middleware.gzip import GZipMiddleware
 from fastapi.responses import JSONResponse, Response
 import numpy as np
 from pydantic import BaseModel, Field
@@ -44,6 +45,8 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+# Compress JSON payloads to minimize mobile network transfer latency
+app.add_middleware(GZipMiddleware, minimum_size=500)
 
 
 def _init_default_detector() -> ICardDetector:

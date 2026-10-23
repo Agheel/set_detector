@@ -130,8 +130,14 @@ class YoloCardDetector(ICardDetector):
 
     ALLOWED_EXTENSIONS = (".pt", ".onnx")
 
-    def __init__(self, weights_path: str, conf_threshold: float = 0.5) -> None:
+    def __init__(
+        self,
+        weights_path: str,
+        conf_threshold: float = 0.5,
+        imgsz: int = 640,
+    ) -> None:
         self._conf_threshold = conf_threshold
+        self._imgsz = imgsz
         self._weights_path = self._validate_and_resolve_weights_path(weights_path)
         self._model = self._load_yolo_model(self._weights_path)
 
@@ -210,7 +216,12 @@ class YoloCardDetector(ICardDetector):
         """Run YOLO inference on validated image and parse detected cards."""
         validate_image_security(image)
 
-        results = self._model(image, conf=self._conf_threshold, verbose=False)
+        results = self._model(
+            image,
+            conf=self._conf_threshold,
+            imgsz=self._imgsz,
+            verbose=False,
+        )
         detected: List[DetectedCard] = []
 
         if not results:

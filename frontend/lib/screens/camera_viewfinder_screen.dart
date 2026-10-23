@@ -29,6 +29,13 @@ class _CameraViewfinderScreenState extends State<CameraViewfinderScreen> {
   final DetectionResultData _previewBoard =
       DetectionResultData.figmaThreeSetsPreset();
 
+  @override
+  void initState() {
+    super.initState();
+    // Pre-establish TLS & HTTP Keep-Alive connection to Hugging Face Spaces on screen entry
+    widget.apiClient.warmUpConnection();
+  }
+
   void _openManualSolverSheet() {
     showModalBottomSheet<void>(
       context: context,
