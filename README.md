@@ -1,56 +1,52 @@
 # SET Game YOLO Detection & Solver (`set_detector`)
 
-컴퓨터 비전(YOLO) 모델을 활용하여 보드게임 **세트(SET)** 카드를 실시간으로 탐지하고, 유한 기하학($\mathbb{F}_3^4$) 알고리즘으로 유효한 3장 조합(SET)을 자동 판별 및 시각화하는 백엔드 엔진입니다.
+컴퓨터 비전(YOLO) 모델과 유한 기하학($\mathbb{F}_3^4$) 고속 솔버를 결합한 **백엔드(`backend/`)** 및 Figma 디자인 시스템 기반 **Flutter 프론트엔드(`frontend/`)** 모노레포 프로젝트입니다.
 
 ---
 
-## 1. 아키텍처 및 SOLID 설계 원칙
+## 1. 프로젝트 디렉터리 구조 (`backend` / `frontend` 분리)
 
-본 프로젝트는 `ARCHITECTURE.md`에 정의된 **SOLID 원칙**과 **Security-First 아키텍처**를 엄격히 준수합니다.
-
-- **SRP (단일 책임 원칙)**
-  - `set_engine/models.py`: 불변(`frozen=True`) 도메인 엔티티 (`Card`, `BoundingBox`, `DetectedCard`, `SetCombination`) 정의
-  - `set_engine/solver.py`: 유한체 $\text{GF}(3)$ 기반 Modulo 3 연산 및 $\mathcal{O}(N^2)$ 보완 카드(Complement) 탐색 알고리즘 전담
-  - `set_engine/detector.py`: 이미지 보안 검증 및 YOLO/Mock 카드 객체 탐지 전담
-  - `set_engine/visualizer.py`: OpenCV 기반 바운딩 박스 및 유효 SET 삼각 연결선 렌더링 전담
-  - `set_engine/service.py`: 탐지 $\rightarrow$ 판별 $\rightarrow$ 시각화 파이프라인 조율(Orchestration) 전담
-  - `api.py`: FastAPI 기반 RESTful 엔드포인트, 파일 업로드 보안 검증 및 직렬화 전담
-- **OCP & LSP (개방-폐쇄 및 리스코프 치환 원칙)**
-  - `ICardDetector` 인터페이스를 통해 실전용 `YoloCardDetector`와 테스트/개발용 `MockCardDetector`를 비즈니스 로직 수정 없이 완벽히 치환 가능
-- **ISP & DIP (인터페이스 분리 및 의존성 역전 원칙)**
-  - `SetService`는 구체 클래스가 아닌 `ICardDetector`, `ISetSolver`, `ISetVisualizer` 추상 인터페이스에만 의존
-
----
-
-## 2. 보안 방어 기작 (Security-First Mechanisms)
-
-1. **Magic Bytes 시그니처 검증 (`api.py`)**: 확장자 위조(Spoofing) 및 악성 스크립트 업로드를 차단하기 위해 바이너리 헤더(JPEG `\xff\xd8\xff`, PNG `\x89PNG\r\n\x1a\n`, WebP `RIFF`)를 직접 검증합니다.
-2. **DoS 및 Decompression Bomb 방어 (`api.py`, `set_engine/detector.py`)**:
-   - 업로드 스트림 크기를 최대 **5MB**로 제한하여 메모리 고갈 공격을 차단합니다 (`HTTP 413`).
-   - 디코딩된 이미지 행렬의 타입(`uint8`), 채널(`3채널 BGR`), 해상도(`32x32` ~ `4096x4096`)를 엄격히 검증합니다.
-3. **경로 순회(Path Traversal) 방어 (`set_engine/detector.py`)**:
-   - YOLO 가중치 로드 시 `os.path.realpath` 정규화 및 허용 확장자(`.pt`, `.onnx`) 화이트리스트 검증을 수행합니다.
-4. **정적 보안 감사 준수**: 프로덕션 코드 내 `assert` 문을 배제하고 명시적 예외 처리 및 정형화된 HTTP 상태 코드를 반환합니다.
+```text
+set_detector/
+├── backend/                  # FastAPI + YOLO 비전 추론 + GF(3)^4 솔버 백엔드
+│   ├── api.py                # REST API 엔드포인트 및 Magic Bytes/DoS 방어
+│   ├── set_engine/           # SOLID 아키텍처 코어 엔진 (models, detector, solver, visualizer, service)
+│   ├── weights/              # YOLO 가중치(.pt, .onnx) 자동 로드 디렉터리
+│   ├── Dockerfile            # Python 3.12 멀티스테이지 컨테이너 빌드
+│   └── requirements.txt      # 백엔드 패키지 의존성
+├── frontend/                 # Figma 'Set' 디자인 기반 Flutter 모바일 프론트엔드
+│   ├── lib/
+│   │   ├── main.dart         # 6대 화면 네비게이션 플로우 조율
+│   │   ├── models/           # 불변 카드/탐지 결과 도메인 모델
+│   │   ├── services/         # 백엔드 API 클라이언트 및 오프라인 GF(3)^4 솔버
+│   │   ├── theme/            # Figma 색상 토큰 및 다크 테마
+│   │   ├── widgets/          # 벡터 카드 심볼 및 네온 삼각 연결 CustomPainter
+│   │   └── screens/          # 01 시작 안내 ~ 05B 촬영 품질 6대 화면
+│   └── pubspec.yaml          # Flutter 프로젝트 설정
+├── tests/                    # 하네스 단위/통합 테스트 스위트 (커버리지 99%+)
+├── ARCHITECTURE.md           # 시스템 요구사항, 기술 스택 및 아키텍처 명세서
+├── docker-compose.yml        # 백엔드 컨테이너 오케스트레이션
+├── Dockerfile.harness        # 품질/보안 검증 하네스 컨테이너
+└── harness-check.sh          # Flake8, MyPy, Bandit, Semgrep, Pytest 자동 검증 스크립트
+```
 
 ---
 
-## 3. REST API 명세
+## 2. 실행 방법
 
-| 메서드 | 엔드포인트 | 설명 |
-| :--- | :--- | :--- |
-| `GET` | `/health` | 서버 상태 및 현재 활성화된 탐지기(`YoloCardDetector` / `MockCardDetector`) 확인 |
-| `POST` | `/api/v1/detect` | 카드 이미지 업로드 $\rightarrow$ 탐지된 카드 목록, 유효 SET 조합, Base64 시각화 이미지 반환 |
-| `POST` | `/api/v1/detect/image` | 카드 이미지 업로드 $\rightarrow$ SET 조합이 하이라이트된 JPEG 이미지 바이너리 직접 반환 |
-| `POST` | `/api/v1/solve` | 카드 속성(숫자, 모양, 색상, 음영) JSON 리스트 입력 $\rightarrow$ 유효 SET 조합 반환 |
-
----
-
-## 4. 실행 및 검증 방법
-
-### 로컬 서버 실행
+### 백엔드 (`backend/`) 실행
 ```bash
+cd backend
 pip install -r requirements.txt
 uvicorn api:app --host 0.0.0.0 --port 8000 --reload
+```
+- 학습된 YOLO 가중치 파일(`.pt` 또는 `.onnx`)은 `backend/weights/` 폴더(예: `backend/weights/best.pt`)에 넣으면 코드 수정 없이 즉시 `YoloCardDetector`로 동작합니다.
+
+### 프론트엔드 (`frontend/`) 실행
+```bash
+cd frontend
+flutter pub get
+flutter run
 ```
 
 ### 하네스(Harness) 품질 및 보안 검증
