@@ -1,7 +1,7 @@
 ---
 title: SET Game YOLO Detector API
 emoji: 🃏
-colorFrom: cyan
+colorFrom: blue
 colorTo: indigo
 sdk: gradio
 app_file: app.py
