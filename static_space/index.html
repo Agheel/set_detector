@@ -1,0 +1,275 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>Set Detector — On-Device AI</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600&family=Inter:wght@600;700&family=Noto+Sans+KR:wght@400;500;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="./styles.css" />
+  <script src="https://cdn.jsdelivr.net/npm/onnxruntime-web@1.20.1/dist/ort.min.js"></script>
+</head>
+<body>
+  <main class="phone-frame" id="app-root">
+    <!-- 01 시작 안내 (#8:10915) -->
+    <section class="screen active" id="screen-01">
+      <div class="brand-row">
+        <div class="brand-mark">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 7V5a2 2 0 0 1 2-2h2"/><path d="M17 3h2a2 2 0 0 1 2 2v2"/><path d="M21 17v2a2 2 0 0 1-2 2h-2"/><path d="M7 21H5a2 2 0 0 1-2-2v-2"/><line x1="7" y1="12" x2="17" y2="12"/></svg>
+        </div>
+        <span class="brand-title">Set Detector</span>
+      </div>
+
+      <div class="onboarding-illus" id="onboarding-illustration"></div>
+
+      <div>
+        <h1 class="intro-heading">카메라를 비추면<br/>AI가 세트를 즉시 찾아냅니다.</h1>
+        <p class="intro-sub">복잡한 조합은 AI에게, 발견의 즐거움은 당신에게.</p>
+      </div>
+
+      <div class="privacy-badge">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#06B6D4" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><path d="m9 12 2 2 4-4"/></svg>
+        <span>촬영된 이미지는 분석 후 즉시 폐기되며 서버에 저장되지 않습니다.</span>
+      </div>
+
+      <button class="btn-primary" id="btn-start-camera">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg>
+        <span>카메라 권한 허용 및 시작</span>
+      </button>
+      <p class="perm-note">카메라 권한은 설정에서 언제든 변경할 수 있어요.</p>
+    </section>
+
+    <!-- 02 카메라 · 자동 촬영 (#8:10985) -->
+    <section class="screen tabletop-bg" id="screen-02">
+      <div class="scrim-top"></div>
+      <div class="scrim-bottom"></div>
+      <div class="layer-content">
+        <div class="top-nav">
+          <button class="icon-btn" id="btn-flash-toggle" title="플래시 전환">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="1" y1="1" x2="23" y2="23"/><path d="M16.57 16.57 13 21l-1-7H7l2.18-3.82"/><path d="M14.56 6.44 13 3l-2.43 4.25"/></svg>
+          </button>
+          <div class="mode-switch">
+            <button class="mode-opt active" id="mode-auto">자동</button>
+            <button class="mode-opt" id="mode-manual">수동</button>
+          </div>
+          <button class="icon-btn" id="btn-open-scenarios" title="시나리오 및 AI 모델 상태">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+          </button>
+        </div>
+
+        <div class="live-status">
+          <span class="live-dot"></span>
+          <span id="live-status-text">실시간 인식 중</span>
+        </div>
+
+        <div class="board-viewport">
+          <video id="camera-video" autoplay playsinline muted></video>
+          <div class="cards-grid" id="viewfinder-grid"></div>
+        </div>
+
+        <div style="display:flex;justify-content:space-between;align-items:center;margin:10px 0;">
+          <span style="font-family:'IBM Plex Mono',monospace;font-size:12px;" id="viewfinder-card-count">12 / 12 CARDS</span>
+          <span style="font-size:11px;color:var(--cyan-accent);display:inline-flex;align-items:center;gap:5px;" id="ai-engine-badge">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="4" y="4" width="16" height="16" rx="2"/><rect x="9" y="9" width="6" height="6"/></svg>
+            기기 내 분석
+          </span>
+        </div>
+
+        <div style="text-align:center;margin-bottom:14px;">
+          <div style="font-size:17px;font-weight:700;margin-bottom:4px;">카드를 프레임 안에 맞춰주세요</div>
+          <div style="font-size:12px;color:var(--text-secondary);" id="capture-guide-sub">화면이 안정되면 자동으로 촬영합니다.</div>
+        </div>
+
+        <div style="display:flex;justify-content:space-between;align-items:center;">
+          <div style="width:88px;text-align:center;">
+            <input type="file" id="album-file-input" accept="image/*" style="display:none;" />
+            <button class="icon-btn" id="btn-album-import" title="앨범 가져오기">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+            </button>
+            <div style="font-size:12px;margin-top:6px;">앨범 가져오기</div>
+          </div>
+
+          <div style="text-align:center;">
+            <button class="shutter-btn" id="btn-shutter" title="촬영 및 분석">
+              <span class="shutter-face"><span class="shutter-dot"></span></span>
+            </button>
+            <div style="font-size:11px;color:var(--text-secondary);margin-top:6px;" id="shutter-caption">자동 촬영 대기</div>
+          </div>
+
+          <div style="width:96px;text-align:center;">
+            <button class="icon-btn" id="btn-manual-solver" title="수동 속성 입력">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="4" y1="21" x2="4" y2="14"/><line x1="4" y1="10" x2="4" y2="3"/><line x1="12" y1="21" x2="12" y2="12"/><line x1="12" y1="8" x2="12" y2="3"/><line x1="20" y1="21" x2="20" y2="16"/><line x1="20" y1="12" x2="20" y2="3"/></svg>
+            </button>
+            <div style="font-size:12px;margin-top:6px;">수동 속성 입력</div>
+            <div style="font-size:10px;color:var(--text-secondary);">오프라인 사용 가능</div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 03 탐지 결과 · 세트 존재 여부 (#8:11187) -->
+    <section class="screen tabletop-bg" id="screen-03">
+      <div class="scrim-top"></div>
+      <div class="scrim-bottom"></div>
+      <div class="layer-content">
+        <div class="top-nav">
+          <button class="icon-btn" data-go="screen-02" title="뒤로 가기">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="15 18 9 12 15 6"/></svg>
+          </button>
+          <div class="chip-success">✨ 세트가 발견되었어요</div>
+          <button class="icon-btn" data-go="screen-04" title="세트 상세">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/><circle cx="5" cy="12" r="1"/></svg>
+          </button>
+        </div>
+
+        <div style="text-align:center;font-size:12px;margin:12px 0 14px;" id="result-summary-line">12장 분석 완료 · 세트 존재 여부 확인</div>
+
+        <div class="board-viewport">
+          <div class="cards-grid" id="result-grid"></div>
+        </div>
+
+        <div style="margin:18px 0 20px;">
+          <h2 style="font-size:22px;font-weight:700;margin-bottom:10px;">세트가 발견되었어요.</h2>
+          <p style="font-size:12px;color:var(--text-secondary);line-height:1.5;">어떤 카드가 세트인지 다음 화면에서 확인해보세요.</p>
+        </div>
+
+        <div style="display:flex;gap:8px;">
+          <button class="btn-secondary" style="width:124px;" data-go="screen-02">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"/></svg>
+            <span>다시 촬영</span>
+          </button>
+          <button class="btn-primary" style="flex:1;" data-go="screen-04">세트 조합 보기</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- 04 세트 상세 · 카드 집중 (#8:11428) -->
+    <section class="screen tabletop-bg" id="screen-04">
+      <div class="scrim-top"></div>
+      <div class="scrim-bottom"></div>
+      <div class="layer-content">
+        <div class="top-nav">
+          <button class="icon-btn" data-go="screen-03" title="뒤로 가기">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="15 18 9 12 15 6"/></svg>
+          </button>
+          <span style="font-size:17px;font-weight:700;">세트 상세</span>
+          <button style="background:none;border:none;color:var(--cyan-accent);font-size:15px;font-weight:700;cursor:pointer;width:44px;text-align:right;" data-go="screen-02">완료</button>
+        </div>
+
+        <div style="text-align:center;font-size:12px;margin:10px 0 12px;" id="detail-guide-text">강조된 3장의 카드를 함께 확인해보세요</div>
+
+        <div class="board-viewport" id="detail-board-viewport">
+          <div class="cards-grid" id="detail-grid"></div>
+          <svg class="set-svg-overlay" id="detail-svg-overlay"></svg>
+        </div>
+
+        <div class="detail-sheet">
+          <div class="drag-handle"></div>
+          <div style="display:flex;justify-content:space-between;align-items:center;">
+            <span style="font-size:20px;font-weight:700;" id="detail-set-title">세트 01</span>
+            <div style="display:flex;align-items:center;gap:12px;">
+              <button id="btn-prev-set" style="background:none;border:none;color:var(--text-secondary);cursor:pointer;font-size:18px;">‹</button>
+              <span style="font-family:'IBM Plex Mono',monospace;font-size:13px;" id="detail-set-counter">1 / 3</span>
+              <button id="btn-next-set" style="background:none;border:none;color:var(--text-secondary);cursor:pointer;font-size:18px;">›</button>
+            </div>
+          </div>
+
+          <div style="display:flex;align-items:center;gap:8px;">
+            <div id="detail-card-chips" style="display:flex;gap:8px;"></div>
+            <span style="margin-left:auto;font-size:11px;color:var(--text-secondary);">옆으로 밀어 다른 세트 보기</span>
+          </div>
+
+          <div id="detail-rule-chips" style="display:flex;gap:6px;flex-wrap:wrap;"></div>
+
+          <div style="display:flex;justify-content:space-between;align-items:center;height:36px;">
+            <span style="font-size:14px;display:inline-flex;align-items:center;gap:8px;">💡 2장만 힌트 보기</span>
+            <input type="checkbox" id="toggle-two-card-hint" style="width:40px;height:22px;accent-color:var(--cyan-accent);cursor:pointer;" />
+          </div>
+
+          <div id="detail-dots" style="display:flex;justify-content:center;gap:5px;"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 05 예외 A · 세트 없음 (#8:11672) -->
+    <section class="screen tabletop-bg" id="screen-05">
+      <div class="scrim-top"></div>
+      <div class="scrim-bottom"></div>
+      <div class="layer-content">
+        <div class="top-nav">
+          <button class="icon-btn" data-go="screen-02">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="15 18 9 12 15 6"/></svg>
+          </button>
+          <span style="font-size:17px;font-weight:700;">분석 완료</span>
+          <span style="font-family:'IBM Plex Mono',monospace;font-size:13px;color:var(--text-secondary);">0 SET</span>
+        </div>
+
+        <div style="text-align:center;font-size:12px;margin:12px 0;">12장 인식 완료 · 가능한 조합을 모두 확인했어요</div>
+
+        <div class="board-viewport">
+          <div class="cards-grid" id="empty-grid"></div>
+        </div>
+
+        <div style="background:var(--surface-slate-800);border:1px solid var(--border-slate-700);border-radius:16px;padding:16px;display:flex;align-items:center;gap:12px;margin:12px 0 10px;">
+          <div class="brand-mark">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="12 2 2 7 12 12 22 7 12 2"/><polyline points="2 17 12 22 22 17"/><polyline points="2 12 12 17 22 12"/></svg>
+          </div>
+          <span style="font-size:14px;font-weight:500;">현재 세트가 없습니다. 카드 3장을 더 놓으세요.</span>
+        </div>
+
+        <div style="text-align:center;font-size:12px;color:var(--text-secondary);margin-bottom:14px;">추가한 카드까지 한 화면에 담아주세요.</div>
+
+        <button class="btn-primary" data-go="screen-02">카드 추가 후 다시 촬영</button>
+      </div>
+    </section>
+
+    <!-- 05B 예외 B · 촬영 품질 (#8:11854) -->
+    <section class="screen tabletop-bg" id="screen-05b">
+      <div class="scrim-top"></div>
+      <div class="scrim-bottom"></div>
+      <div class="layer-content">
+        <div class="top-nav">
+          <button class="icon-btn" data-go="screen-02">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="15 18 9 12 15 6"/></svg>
+          </button>
+          <span style="font-size:17px;font-weight:700;">촬영 품질 확인</span>
+          <button class="icon-btn" data-go="screen-02" style="color:var(--cyan-accent);">⚡</button>
+        </div>
+
+        <div style="display:flex;justify-content:center;gap:8px;margin-top:16px;">
+          <span class="chip-flag chip-rose">🎯 흔들림 감지</span>
+          <span class="chip-flag chip-amber">☀️ 빛이 부족해요</span>
+        </div>
+
+        <div style="margin:auto;width:112px;height:112px;border:2px solid var(--rose-accent);border-radius:16px;display:flex;align-items:center;justify-content:center;">
+          <div style="width:52px;height:52px;border-radius:16px;background:var(--glass-slate-900);display:flex;align-items:center;justify-content:center;font-size:26px;">⚠️</div>
+        </div>
+
+        <div style="background:var(--surface-slate-800);border:1px solid var(--rose-accent);border-radius:16px;padding:20px;margin-bottom:24px;">
+          <div style="font-size:18px;font-weight:700;margin-bottom:8px;">화면이 흐리고 어두워요</div>
+          <p style="font-size:13px;color:var(--text-secondary);line-height:1.7;margin-bottom:8px;">렌즈를 닦고 밝은 곳에서 촬영해주세요.<br/>카메라를 잠시 고정하면 더 잘 인식해요.</p>
+          <div style="font-size:11px;color:var(--rose-accent);">카드를 정확히 읽기 위해 분석을 멈췄어요.</div>
+        </div>
+
+        <button class="btn-primary" data-go="screen-02">다시 촬영하기</button>
+      </div>
+    </section>
+
+    <!-- 시나리오 & 수동 솔버 모달 -->
+    <div class="modal-backdrop" id="scenario-modal">
+      <div class="modal-sheet">
+        <div style="display:flex;justify-content:space-between;align-items:center;">
+          <strong style="font-size:16px;">온디바이스 AI & 화면 시나리오 전환</strong>
+          <button id="btn-close-modal" style="background:none;border:none;color:var(--text-secondary);font-size:20px;cursor:pointer;">✕</button>
+        </div>
+        <p style="font-size:12px;color:var(--text-secondary);" id="onnx-model-status">브라우저 내장 YOLOv11 모델(best.onnx) 및 GF(3)^4 고속 솔버가 활성화되어 있습니다.</p>
+        <button class="btn-primary" id="btn-scenario-3sets">03 탐지 결과 · 세트 존재 여부 (3 SETs)</button>
+        <button class="btn-secondary" id="btn-scenario-0sets">05 예외 A · 세트 없음 (0 SET)</button>
+        <button class="btn-secondary" id="btn-scenario-quality">05B 예외 B · 촬영 품질 경고</button>
+      </div>
+    </div>
+  </main>
+  <script src="./app.js"></script>
+</body>
+</html>
