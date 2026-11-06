@@ -369,7 +369,7 @@ body {
   width: 100%;
   height: 100%;
   object-fit: cover;
-  border-radius: 16px;
+  z-index: 1;
   display: none;
 }
 
@@ -395,6 +395,66 @@ body {
   display: flex;
   align-items: center;
   justify-content: center;
+}
+
+/* Transparent Viewfinder Registration Guide Slot (Figma #8:12319) */
+.guide-slot {
+  position: relative;
+  width: 88px;
+  height: 80px;
+  border-radius: 8px;
+  border: 1px dashed rgba(248, 250, 252, 0.32);
+  background: rgba(15, 23, 42, 0.08);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+}
+
+.guide-slot-num {
+  position: absolute;
+  top: 5px;
+  left: 7px;
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 10px;
+  font-weight: 600;
+  color: rgba(248, 250, 252, 0.55);
+}
+
+.guide-slot-cross {
+  width: 8px;
+  height: 8px;
+  position: relative;
+  opacity: 0.35;
+}
+
+.guide-slot-cross::before,
+.guide-slot-cross::after {
+  content: '';
+  position: absolute;
+  background: #F8FAFC;
+}
+
+.guide-slot-cross::before {
+  top: 3.5px;
+  left: 0;
+  width: 8px;
+  height: 1px;
+}
+
+.guide-slot-cross::after {
+  left: 3.5px;
+  top: 0;
+  width: 1px;
+  height: 8px;
+}
+
+.guide-corners {
+  position: absolute;
+  inset: -1px;
+  width: calc(100% + 2px);
+  height: calc(100% + 2px);
+  pointer-events: none;
 }
 
 .playing-card {

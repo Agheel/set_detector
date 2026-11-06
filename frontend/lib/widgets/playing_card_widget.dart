@@ -355,31 +355,69 @@ class TabletopBoardWidget extends StatelessWidget {
                 final isDimmed =
                     focusedCardIndices != null && !isFocused;
 
-                return Center(
-                  child: Stack(
-                    alignment: Alignment.center,
-                    children: [
-                      if (showRegistrationGuide)
-                        CustomPaint(
-                          size: const Size(86, 78),
-                          painter: CardRegistrationCornersPainter(
-                            color: SetColors.textPrimary.withOpacity(0.50),
-                            strokeWidth: 1.3,
+                if (showRegistrationGuide) {
+                  return Center(
+                    child: SizedBox(
+                      width: 88,
+                      height: 80,
+                      child: Stack(
+                        alignment: Alignment.center,
+                        children: [
+                          Container(
+                            width: 88,
+                            height: 80,
+                            decoration: BoxDecoration(
+                              color: SetColors.bgSlate900.withOpacity(0.08),
+                              borderRadius: BorderRadius.circular(8),
+                              border: Border.all(
+                                color: SetColors.textPrimary.withOpacity(0.28),
+                                width: 1.0,
+                              ),
+                            ),
                           ),
-                        ),
-                      PlayingCardWidget(
-                        card: item.card,
-                        badgeNumber: showBadges ? item.displayNumber : null,
-                        highlightColor:
-                            (focusedCardIndices != null && isFocused)
-                                ? focusedHighlightColor
-                                : null,
-                        isDimmed: isDimmed,
-                        onTap: onCardTap != null
-                            ? () => onCardTap!(item.index)
-                            : null,
+                          CustomPaint(
+                            size: const Size(88, 80),
+                            painter: CardRegistrationCornersPainter(
+                              color: SetColors.cyanAccent.withOpacity(0.85),
+                              strokeWidth: 1.8,
+                            ),
+                          ),
+                          Positioned(
+                            top: 5,
+                            left: 7,
+                            child: Text(
+                              item.displayNumber,
+                              style: TextStyle(
+                                fontFamily: 'IBM Plex Mono',
+                                fontSize: 10,
+                                fontWeight: FontWeight.w600,
+                                color: SetColors.textPrimary.withOpacity(0.55),
+                              ),
+                            ),
+                          ),
+                          Icon(
+                            Icons.add,
+                            size: 12,
+                            color: SetColors.textPrimary.withOpacity(0.35),
+                          ),
+                        ],
                       ),
-                    ],
+                    ),
+                  );
+                }
+
+                return Center(
+                  child: PlayingCardWidget(
+                    card: item.card,
+                    badgeNumber: showBadges ? item.displayNumber : null,
+                    highlightColor:
+                        (focusedCardIndices != null && isFocused)
+                            ? focusedHighlightColor
+                            : null,
+                    isDimmed: isDimmed,
+                    onTap: onCardTap != null
+                        ? () => onCardTap!(item.index)
+                        : null,
                   ),
                 );
               },

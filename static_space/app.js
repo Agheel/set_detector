@@ -178,14 +178,29 @@
     `;
   }
 
+  function createGuideSlotHtml(idx) {
+    const label = String(idx + 1).padStart(2, '0');
+    return `
+      <div class="guide-slot">
+        <svg class="guide-corners" viewBox="0 0 90 82" fill="none">
+          <path d="M1 15 V9 Q1 1 9 1 H15" stroke="#06B6D4" stroke-width="1.8" stroke-linecap="round"/>
+          <path d="M75 1 H81 Q89 1 89 9 V15" stroke="#06B6D4" stroke-width="1.8" stroke-linecap="round"/>
+          <path d="M1 67 V73 Q1 81 9 81 H15" stroke="#06B6D4" stroke-width="1.8" stroke-linecap="round"/>
+          <path d="M75 81 H81 Q89 81 89 73 V67" stroke="#06B6D4" stroke-width="1.8" stroke-linecap="round"/>
+        </svg>
+        <span class="guide-slot-num">${label}</span>
+        <span class="guide-slot-cross"></span>
+      </div>
+    `;
+  }
+
   function renderAllBoards() {
-    // 02 Viewfinder
+    // 02 Viewfinder: 12 transparent registration guide slots (3x4) so camera feed is visible
     const vfGrid = document.getElementById('viewfinder-grid');
     if (vfGrid) {
-      vfGrid.innerHTML = currentCards
-        .slice(0, 12)
-        .map((c) => createPlayingCardHtml(c, {}))
-        .join('');
+      vfGrid.innerHTML = Array.from({ length: 12 }, (_, idx) =>
+        createGuideSlotHtml(idx)
+      ).join('');
     }
     const vfCount = document.getElementById('viewfinder-card-count');
     if (vfCount) vfCount.textContent = `${currentCards.length} / 12 CARDS`;
@@ -325,13 +340,21 @@
   async function runYoloOnnxInference(sourceEl) {
     if (!ortSession) return null;
     const size = 640;
+    const srcW = sourceEl.videoWidth || sourceEl.naturalWidth || size;
+    const srcH = sourceEl.videoHeight || sourceEl.naturalHeight || size;
+    const scale = Math.min(size / srcW, size / srcH);
+    const drawW = Math.round(srcW * scale);
+    const drawH = Math.round(srcH * scale);
+    const padX = Math.floor((size - drawW) / 2);
+    const padY = Math.floor((size - drawH) / 2);
+
     const canvas = document.createElement('canvas');
     canvas.width = size;
     canvas.height = size;
     const ctx = canvas.getContext('2d');
-    ctx.fillStyle = '#000';
+    ctx.fillStyle = '#727272';
     ctx.fillRect(0, 0, size, size);
-    ctx.drawImage(sourceEl, 0, 0, size, size);
+    ctx.drawImage(sourceEl, padX, padY, drawW, drawH);
     const { data } = ctx.getImageData(0, 0, size, size);
 
     const floatData = new Float32Array(3 * size * size);
@@ -361,7 +384,7 @@
           bestCls = c;
         }
       }
-      if (bestScore >= 0.45) {
+      if (bestScore >= 0.25) {
         const cx = out[0 * numAnchors + a];
         const cy = out[1 * numAnchors + a];
         const w = out[2 * numAnchors + a];
@@ -418,11 +441,14 @@
     if (sourceEl && ortSession) {
       try {
         const detectedCards = await runYoloOnnxInference(sourceEl);
-        if (detectedCards) {
-          currentCards = detectedCards;
+        if (!detectedCards) {
+          showScreen('screen-05b');
+          return;
         }
+        currentCards = detectedCards;
       } catch (_) {
-        // Fallback to current board if inference fails
+        showScreen('screen-05b');
+        return;
       }
     }
     currentSets = findSets(currentCards);
