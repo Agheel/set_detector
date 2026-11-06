@@ -14,6 +14,30 @@ htmlcov/
 venv/
 env/
 
-# Model weights (large binary files)
+# Model weights & training outputs (large binary files)
 *.pt
 *.onnx
+runs/
+set_detector_runs/
+
+# Environment & secrets
+.env
+.env.*
+!.env.example
+
+# Flutter / Dart build & tool caches
+.dart_tool/
+build/
+.flutter-plugins
+.flutter-plugins-dependencies
+.packages
+frontend/.dart_tool/
+frontend/build/
+
+# OS & IDE files
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+*.swp
+*.log

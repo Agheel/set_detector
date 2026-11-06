@@ -38,10 +38,43 @@ class SetColors {
   static const Color symbolGreen = Color(0xFF33785B);
   static const Color symbolRed = Color(0xFFB83F58);
 
-  // Tabletop Wood Grain Tokens
+  // Tabletop Wood Grain & Scrim Tokens (Figma EL-98ce110f, EL-c2042b87, EL-c5e87964)
   static const Color tabletopBase = Color(0xFF231F1A);
-  static const Color woodGrainDark = Color(0x29332E24);
-  static const Color woodGrainLight = Color(0x12D9C9A5);
+  static const Color tabletopGradStart = Color(0xFF8C8370);
+  static const Color tabletopGradMid = Color(0xFF686454);
+  static const Color tabletopGradEnd = Color(0xFF847968);
+  static const Color woodGrainDark = Color(0x29332E24); // rgba(51, 46, 36, 0.16)
+  static const Color woodGrainLight = Color(0x12D9C9A5); // rgba(217, 201, 165, 0.07)
+  static const Color plankSeam = Color(0x2B302B24); // rgba(48, 43, 36, 0.17)
+
+  static const LinearGradient tabletopGradient = LinearGradient(
+    begin: Alignment.topLeft,
+    end: Alignment.bottomRight,
+    colors: [tabletopGradStart, tabletopGradMid, tabletopGradEnd],
+    stops: [0.0, 0.5, 1.0],
+  );
+
+  static const LinearGradient headerScrimGradient = LinearGradient(
+    begin: Alignment.topCenter,
+    end: Alignment.bottomCenter,
+    colors: [
+      Color(0xF00F172A), // rgba(15, 23, 42, 0.94)
+      Color(0xB30F172A), // rgba(15, 23, 42, 0.70)
+      Color(0x000F172A), // rgba(15, 23, 42, 0.00)
+    ],
+    stops: [0.0, 0.72, 1.0],
+  );
+
+  static const LinearGradient controlsScrimGradient = LinearGradient(
+    begin: Alignment.topCenter,
+    end: Alignment.bottomCenter,
+    colors: [
+      Color(0x000F172A), // rgba(15, 23, 42, 0.00)
+      Color(0xE60F172A), // rgba(15, 23, 42, 0.90)
+      Color(0xFF0F172A), // rgba(15, 23, 42, 1.00)
+    ],
+    stops: [0.0, 0.35, 1.0],
+  );
 
   static Color setColorForIndex(int index) {
     return setPalette[index % setPalette.length];

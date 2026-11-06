@@ -63,9 +63,9 @@ class PlayingCardWidget extends StatelessWidget {
                 border: Border.all(color: SetColors.cardBorder, width: 1),
                 boxShadow: const [
                   BoxShadow(
-                    color: Color(0x33000000),
-                    blurRadius: 6,
-                    offset: Offset(0, 3),
+                    color: Color(0x45000000), // rgba(0, 0, 0, 0.27)
+                    blurRadius: 8,
+                    offset: Offset(2, 5),
                   ),
                 ],
               ),
@@ -120,11 +120,11 @@ class PlayingCardWidget extends StatelessWidget {
                 ),
               ),
 
-            // Inactive card dimming overlay (Figma 'Inactive card dimming' rgba(15,23,42,0.72))
+            // Inactive card dimming overlay (Figma 'Inactive card dimming' 104x96, rgba(15,23,42,0.72), r=10)
             if (isDimmed)
               Container(
-                width: width + 12,
-                height: height + 12,
+                width: width + 16,
+                height: height + 16,
                 decoration: BoxDecoration(
                   color: SetColors.inactiveDimming,
                   borderRadius: BorderRadius.circular(10),
@@ -326,11 +326,15 @@ class TabletopBoardWidget extends StatelessWidget {
 
         final triangles = <List<Offset>>[];
         for (final comb in activeSets) {
-          triangles.add(
-            comb.indices
-                .map((idx) => _cardCenterForIndex(idx, boardW, boardH))
-                .toList(),
-          );
+          final validIndices =
+              comb.indices.where((idx) => idx >= 0 && idx < 12).toList();
+          if (validIndices.length == 3) {
+            triangles.add(
+              validIndices
+                  .map((idx) => _cardCenterForIndex(idx, boardW, boardH))
+                  .toList(),
+            );
+          }
         }
 
         return Stack(
@@ -356,15 +360,11 @@ class TabletopBoardWidget extends StatelessWidget {
                     alignment: Alignment.center,
                     children: [
                       if (showRegistrationGuide)
-                        Container(
-                          width: 96,
-                          height: 88,
-                          decoration: BoxDecoration(
-                            borderRadius: BorderRadius.circular(10),
-                            border: Border.all(
-                              color: SetColors.textPrimary.withOpacity(0.45),
-                              width: 1.2,
-                            ),
+                        CustomPaint(
+                          size: const Size(86, 78),
+                          painter: CardRegistrationCornersPainter(
+                            color: SetColors.textPrimary.withOpacity(0.50),
+                            strokeWidth: 1.3,
                           ),
                         ),
                       PlayingCardWidget(
@@ -537,4 +537,298 @@ class SetSecondaryButton extends StatelessWidget {
       ),
     );
   }
+}
+
+/// Figma Component #8:12314: 'Button / Shutter' (80x80 ring stroke 3px, 64x64 face, 8x8 cyan dot).
+class SetShutterButton extends StatelessWidget {
+  final VoidCallback onPressed;
+
+  const SetShutterButton({
+    super.key,
+    required this.onPressed,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onPressed,
+      child: Container(
+        width: 80,
+        height: 80,
+        alignment: Alignment.center,
+        decoration: BoxDecoration(
+          shape: BoxShape.circle,
+          border: Border.all(
+            color: SetColors.textPrimary,
+            width: 3.0,
+          ),
+        ),
+        child: Container(
+          width: 64,
+          height: 64,
+          alignment: Alignment.center,
+          decoration: const BoxDecoration(
+            color: SetColors.textPrimary,
+            shape: BoxShape.circle,
+          ),
+          child: Container(
+            width: 8,
+            height: 8,
+            decoration: const BoxDecoration(
+              color: SetColors.cyanAccent,
+              shape: BoxShape.circle,
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// Figma Component #8:12315: 'Chip / Success' (height 32, padding 0 12, rgba(6,182,212,0.12), stroke #06B6D4 0.6px).
+class SetSuccessChip extends StatelessWidget {
+  final String label;
+
+  const SetSuccessChip({
+    super.key,
+    required this.label,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      height: 32,
+      padding: const EdgeInsets.symmetric(horizontal: 12),
+      alignment: Alignment.center,
+      decoration: BoxDecoration(
+        color: SetColors.cyanTint12,
+        borderRadius: BorderRadius.circular(100),
+        border: Border.all(color: SetColors.cyanAccent, width: 0.6),
+      ),
+      child: Text(
+        label,
+        style: const TextStyle(
+          fontSize: 12,
+          fontWeight: FontWeight.w700,
+          color: SetColors.cyanAccent,
+        ),
+      ),
+    );
+  }
+}
+
+/// Figma Component #8:12316 & #8:12317: 'Chip / Condition' & 'Chip / Warning'.
+class SetStatusChip extends StatelessWidget {
+  final String label;
+  final IconData? icon;
+  final Color textColor;
+  final Color backgroundColor;
+  final Color? borderColor;
+  final double borderRadius;
+
+  const SetStatusChip({
+    super.key,
+    required this.label,
+    this.icon,
+    this.textColor = SetColors.textPrimary,
+    this.backgroundColor = SetColors.surfaceSlate800,
+    this.borderColor,
+    this.borderRadius = 100,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      height: 32,
+      padding: const EdgeInsets.symmetric(horizontal: 12),
+      decoration: BoxDecoration(
+        color: backgroundColor,
+        borderRadius: BorderRadius.circular(borderRadius),
+        border: borderColor != null
+            ? Border.all(color: borderColor!, width: 0.6)
+            : null,
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          if (icon != null) ...[
+            Icon(icon, size: 14, color: textColor),
+            const SizedBox(width: 6),
+          ],
+          Text(
+            label,
+            style: TextStyle(
+              fontSize: 12,
+              fontWeight: FontWeight.w700,
+              color: textColor,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// Figma Component #8:12319: 'Card registration corners' corner bracket painter.
+class CardRegistrationCornersPainter extends CustomPainter {
+  final Color color;
+  final double strokeWidth;
+  final double cornerLength;
+  final double radius;
+
+  const CardRegistrationCornersPainter({
+    this.color = const Color(0x80F8FAFC),
+    this.strokeWidth = 1.3,
+    this.cornerLength = 14.0,
+    this.radius = 8.0,
+  });
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final paint = Paint()
+      ..color = color
+      ..strokeWidth = strokeWidth
+      ..style = PaintingStyle.stroke
+      ..strokeCap = StrokeCap.round;
+
+    final w = size.width;
+    final h = size.height;
+    final c = cornerLength;
+    final r = radius;
+
+    // Top-left corner
+    final tl = Path()
+      ..moveTo(0, c)
+      ..lineTo(0, r)
+      ..quadraticBezierTo(0, 0, r, 0)
+      ..lineTo(c, 0);
+    canvas.drawPath(tl, paint);
+
+    // Top-right corner
+    final tr = Path()
+      ..moveTo(w - c, 0)
+      ..lineTo(w - r, 0)
+      ..quadraticBezierTo(w, 0, w, r)
+      ..lineTo(w, c);
+    canvas.drawPath(tr, paint);
+
+    // Bottom-left corner
+    final bl = Path()
+      ..moveTo(0, h - c)
+      ..lineTo(0, h - r)
+      ..quadraticBezierTo(0, h, r, h)
+      ..lineTo(c, h);
+    canvas.drawPath(bl, paint);
+
+    // Bottom-right corner
+    final br = Path()
+      ..moveTo(w - c, h)
+      ..lineTo(w - r, h)
+      ..quadraticBezierTo(w, h, w, h - r)
+      ..lineTo(w, h - c);
+    canvas.drawPath(br, paint);
+  }
+
+  @override
+  bool shouldRepaint(covariant CardRegistrationCornersPainter oldDelegate) {
+    return oldDelegate.color != color || oldDelegate.strokeWidth != strokeWidth;
+  }
+}
+
+/// Figma 'Captured tabletop / Editable cards' wood-grain background with Header & Controls contrast scrims.
+class WoodTabletopBackground extends StatelessWidget {
+  final Widget child;
+
+  const WoodTabletopBackground({
+    super.key,
+    required this.child,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Stack(
+      children: [
+        // 1. Tabletop Linear Gradient (EL-98ce110f)
+        Positioned.fill(
+          child: DecoratedBox(
+            decoration: const BoxDecoration(
+              gradient: SetColors.tabletopGradient,
+            ),
+            child: CustomPaint(
+              painter: _WoodGrainPainter(),
+            ),
+          ),
+        ),
+        // 2. Header contrast scrim (EL-c2042b87: height 182)
+        const Positioned(
+          top: 0,
+          left: 0,
+          right: 0,
+          height: 182,
+          child: IgnorePointer(
+            child: DecoratedBox(
+              decoration: BoxDecoration(
+                gradient: SetColors.headerScrimGradient,
+              ),
+            ),
+          ),
+        ),
+        // 3. Controls contrast scrim (EL-c5e87964: height 282)
+        const Positioned(
+          bottom: 0,
+          left: 0,
+          right: 0,
+          height: 282,
+          child: IgnorePointer(
+            child: DecoratedBox(
+              decoration: BoxDecoration(
+                gradient: SetColors.controlsScrimGradient,
+              ),
+            ),
+          ),
+        ),
+        // 4. Foreground content
+        child,
+      ],
+    );
+  }
+}
+
+class _WoodGrainPainter extends CustomPainter {
+  @override
+  void paint(Canvas canvas, Size size) {
+    final darkGrain = Paint()
+      ..color = SetColors.woodGrainDark
+      ..strokeWidth = 1.2
+      ..style = PaintingStyle.stroke;
+    final lightGrain = Paint()
+      ..color = SetColors.woodGrainLight
+      ..strokeWidth = 0.8
+      ..style = PaintingStyle.stroke;
+    final seamPaint = Paint()
+      ..color = SetColors.plankSeam
+      ..strokeWidth = 1.0;
+
+    // Vertical wood grain lines spaced ~19px apart as in Figma EL-1f8fa0e7..EL-5c07bab9
+    for (var i = 0; i < 22; i++) {
+      final x = (i * 19.0) % size.width;
+      final paint = (i % 3 == 0) ? darkGrain : lightGrain;
+      canvas.drawLine(Offset(x, 0), Offset(x, size.height), paint);
+    }
+
+    // Plank seams at x = 133/393 and x = 328/393 (EL-ee9663d7, EL-34dcae18)
+    canvas.drawLine(
+      Offset(size.width * (133 / 393), 0),
+      Offset(size.width * (133 / 393), size.height),
+      seamPaint,
+    );
+    canvas.drawLine(
+      Offset(size.width * (328 / 393), 0),
+      Offset(size.width * (328 / 393), size.height),
+      seamPaint,
+    );
+  }
+
+  @override
+  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
 }

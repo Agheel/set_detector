@@ -50,9 +50,21 @@ class _SetDetailScreenState extends State<SetDetailScreen> {
   @override
   Widget build(BuildContext context) {
     final sets = widget.result.sets;
-    final activeSet = sets[_currentIndex];
-    final activeColor = SetColors.setColorForIndex(_currentIndex);
-    final activeTint = SetColors.setTintForIndex(_currentIndex);
+    if (sets.isEmpty) {
+      return Scaffold(
+        backgroundColor: SetColors.bgSlate900,
+        body: Center(
+          child: SetPrimaryButton(
+            label: '돌아가기',
+            onPressed: widget.onBack,
+          ),
+        ),
+      );
+    }
+    final safeIndex = _currentIndex.clamp(0, sets.length - 1);
+    final activeSet = sets[safeIndex];
+    final activeColor = SetColors.setColorForIndex(safeIndex);
+    final activeTint = SetColors.setTintForIndex(safeIndex);
 
     // When '2장만 힌트 보기' is ON, only highlight the first 2 cards of the SET
     final visibleIndices = _twoCardHintOnly
@@ -61,98 +73,101 @@ class _SetDetailScreenState extends State<SetDetailScreen> {
 
     return Scaffold(
       backgroundColor: SetColors.bgSlate900,
-      body: SafeArea(
-        bottom: false,
-        child: Column(
-          children: [
-            // Top section with padding
-            Expanded(
-              child: Padding(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 24.0,
-                  vertical: 12.0,
-                ),
-                child: Column(
-                  children: [
-                    // Detail navigation (345x44): Back icon | '세트 상세' | '완료'
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        SetIconButton(
-                          icon: Icons.chevron_left,
-                          tooltip: '뒤로 가기',
-                          onPressed: widget.onBack,
-                        ),
-                        const Text(
-                          '세트 상세',
-                          style: TextStyle(
-                            fontSize: 17,
-                            fontWeight: FontWeight.w700,
-                            color: SetColors.textPrimary,
+      body: WoodTabletopBackground(
+        child: SafeArea(
+          bottom: false,
+          child: Column(
+            children: [
+              // Top section with padding
+              Expanded(
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 24.0,
+                    vertical: 12.0,
+                  ),
+                  child: Column(
+                    children: [
+                      // Detail navigation (#8:11470, 345x44): Back icon | '세트 상세' | '완료'
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          SetIconButton(
+                            icon: Icons.chevron_left,
+                            tooltip: '뒤로 가기',
+                            onPressed: widget.onBack,
                           ),
-                        ),
-                        TextButton(
-                          onPressed: widget.onDone,
-                          child: const Text(
-                            '완료',
+                          const Text(
+                            '세트 상세',
                             style: TextStyle(
-                              fontSize: 15,
+                              fontSize: 17,
                               fontWeight: FontWeight.w700,
-                              color: SetColors.cyanAccent,
+                              color: SetColors.textPrimary,
                             ),
                           ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 8),
-
-                    // Focused set instruction
-                    Text(
-                      _twoCardHintOnly
-                          ? '힌트 2장과 세트를 이루는 나머지 1장을 찾아보세요'
-                          : '강조된 3장의 카드를 함께 확인해보세요',
-                      style: const TextStyle(
-                        fontSize: 12,
-                        color: SetColors.textPrimary,
+                          TextButton(
+                            onPressed: widget.onDone,
+                            child: const Text(
+                              '완료',
+                              style: TextStyle(
+                                fontSize: 15,
+                                fontWeight: FontWeight.w700,
+                                color: SetColors.cyanAccent,
+                              ),
+                            ),
+                          ),
+                        ],
                       ),
-                    ),
-                    const SizedBox(height: 12),
+                      const SizedBox(height: 8),
 
-                    // Interactive swipeable tabletop focused on active SET (dimming inactive cards)
-                    Expanded(
-                      child: GestureDetector(
-                        onHorizontalDragEnd: (details) {
-                          if ((details.primaryVelocity ?? 0) < -150) {
-                            _nextSet();
-                          } else if ((details.primaryVelocity ?? 0) > 150) {
-                            _prevSet();
-                          }
-                        },
-                        child: TabletopBoardWidget(
-                          cards: widget.result.cards,
-                          activeSets: _twoCardHintOnly ? const [] : [activeSet],
-                          activeSetColors: [activeColor],
-                          focusedCardIndices: visibleIndices,
-                          focusedHighlightColor: activeColor,
-                          showBadges: true,
+                      // Focused set instruction (#8:11469)
+                      Text(
+                        _twoCardHintOnly
+                            ? '힌트 2장과 세트를 이루는 나머지 1장을 찾아보세요'
+                            : '강조된 3장의 카드를 함께 확인해보세요',
+                        style: const TextStyle(
+                          fontSize: 12,
+                          color: SetColors.textPrimary,
                         ),
                       ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
+                      const SizedBox(height: 12),
 
-            // Bottomsheet / Set detail (393x258, #0F172A)
-            Container(
-              width: double.infinity,
-              padding: const EdgeInsets.fromLTRB(24, 12, 24, 24),
-              decoration: const BoxDecoration(
-                color: SetColors.bgSlate900,
-                border: Border(
-                  top: BorderSide(color: SetColors.borderSlate700, width: 1),
+                      // Interactive swipeable tabletop focused on active SET (dimming inactive cards)
+                      Expanded(
+                        child: GestureDetector(
+                          onHorizontalDragEnd: (details) {
+                            if ((details.primaryVelocity ?? 0) < -150) {
+                              _nextSet();
+                            } else if ((details.primaryVelocity ?? 0) > 150) {
+                              _prevSet();
+                            }
+                          },
+                          child: TabletopBoardWidget(
+                            cards: widget.result.cards,
+                            activeSets:
+                                _twoCardHintOnly ? const [] : [activeSet],
+                            activeSetColors: [activeColor],
+                            focusedCardIndices: visibleIndices,
+                            focusedHighlightColor: activeColor,
+                            showBadges: true,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
               ),
+
+              // Bottomsheet / Set detail (#8:11433: 393x258, #0F172A, borderRadius 28px 28px 0 0)
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.fromLTRB(24, 10, 24, 26),
+                decoration: const BoxDecoration(
+                  color: SetColors.bgSlate900,
+                  borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
+                  border: Border(
+                    top: BorderSide(color: SetColors.borderSlate700, width: 1),
+                  ),
+                ),
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -352,6 +367,7 @@ class _SetDetailScreenState extends State<SetDetailScreen> {
           ],
         ),
       ),
+    ),
     );
   }
 }

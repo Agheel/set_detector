@@ -22,15 +22,25 @@ client = TestClient(app)
 
 
 def test_parse_class_label_spec() -> None:
-    """Verify FR-02 / F-02 string label parsing (e.g., '2_oval_red_solid')."""
+    """Verify FR-02 / F-02 string label parsing ('2_oval_red_solid' and 'GDE1')."""
     card = YoloCardDetector.parse_class_label("2_oval_red_solid")
     assert card.as_tuple() == (2, 1, 1, 1)
 
     card_hyphen = YoloCardDetector.parse_class_label("three-diamond-purple-open")
     assert card_hyphen.as_tuple() == (3, 2, 3, 3)
 
+    # Compact Roboflow SET class codes (e.g., 'GDE1', 'RPS3', 'GPTS1')
+    card_compact = YoloCardDetector.parse_class_label("GDE1")
+    assert card_compact.as_tuple() == (1, 2, 2, 3)
+
+    card_compact_5 = YoloCardDetector.parse_class_label("GPTS1")
+    assert card_compact_5.as_tuple() == (1, 3, 2, 1)
+
     with pytest.raises(ValueError, match="Expected 4 tokens"):
         YoloCardDetector.parse_class_label("invalid_token")
+
+    with pytest.raises(ValueError, match="Expected 4 tokens"):
+        YoloCardDetector.parse_class_label("XXXX")
 
     with pytest.raises(ValueError, match="Unrecognized card attributes"):
         YoloCardDetector.parse_class_label("2_circle_blue_solid")

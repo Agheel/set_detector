@@ -88,295 +88,270 @@ class _CameraViewfinderScreenState extends State<CameraViewfinderScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: SetColors.tabletopBase,
-      body: SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 12.0),
-          child: Column(
-            children: [
-              // Capture controls (345x44): Flash icon | Automatic/Manual pill switch | Cloud/Help icon
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  SetIconButton(
-                    icon: _flashOff ? Icons.flash_off : Icons.flash_on,
-                    iconColor: _flashOff
-                        ? SetColors.textPrimary
-                        : SetColors.cyanAccent,
-                    tooltip: '플래시 전환',
-                    onPressed: () => setState(() => _flashOff = !_flashOff),
-                  ),
-                  // Capture mode switch (180x40, rgba(15,23,42,0.80), stroke #334155)
-                  Container(
-                    width: 180,
-                    height: 40,
-                    padding: const EdgeInsets.all(4),
-                    decoration: BoxDecoration(
-                      color: SetColors.glassSlate900,
-                      borderRadius: BorderRadius.circular(100),
-                      border: Border.all(color: SetColors.borderSlate700),
-                    ),
-                    child: Row(
-                      children: [
-                        Expanded(
-                          child: GestureDetector(
-                            onTap: () => setState(() => _isAutoMode = true),
-                            child: Container(
-                              alignment: Alignment.center,
-                              decoration: BoxDecoration(
-                                color: _isAutoMode
-                                    ? SetColors.cyanAccent
-                                    : Colors.transparent,
-                                borderRadius: BorderRadius.circular(100),
-                              ),
-                              child: Text(
-                                '자동',
-                                style: TextStyle(
-                                  fontSize: 13,
-                                  fontWeight: _isAutoMode
-                                      ? FontWeight.w700
-                                      : FontWeight.w400,
-                                  color: _isAutoMode
-                                      ? SetColors.bgSlate900
-                                      : SetColors.textPrimary,
-                                ),
-                              ),
-                            ),
-                          ),
-                        ),
-                        Expanded(
-                          child: GestureDetector(
-                            onTap: () => setState(() => _isAutoMode = false),
-                            child: Container(
-                              alignment: Alignment.center,
-                              decoration: BoxDecoration(
-                                color: !_isAutoMode
-                                    ? SetColors.cyanAccent
-                                    : Colors.transparent,
-                                borderRadius: BorderRadius.circular(100),
-                              ),
-                              child: Text(
-                                '수동',
-                                style: TextStyle(
-                                  fontSize: 13,
-                                  fontWeight: !_isAutoMode
-                                      ? FontWeight.w700
-                                      : FontWeight.w400,
-                                  color: !_isAutoMode
-                                      ? SetColors.bgSlate900
-                                      : SetColors.textPrimary,
-                                ),
-                              ),
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  SetIconButton(
-                    icon: Icons.cloud_outlined,
-                    tooltip: '클라우드 서버 주소 설정 및 시나리오 테스트',
-                    onPressed: _showCloudAndScenarioSheet,
-                  ),
-                ],
-              ),
-              const SizedBox(height: 10),
-
-              // Realtime status ('실시간 인식 중')
-              Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Container(
-                    width: 6,
-                    height: 6,
-                    decoration: const BoxDecoration(
-                      color: SetColors.cyanAccent,
-                      shape: BoxShape.circle,
-                    ),
-                  ),
-                  const SizedBox(width: 6),
-                  const Text(
-                    '실시간 인식 중',
-                    style: TextStyle(
-                      fontSize: 12,
-                      color: SetColors.textPrimary,
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 12),
-
-              // Registration overlay (Guide / Twelve card positions 3x4)
-              Expanded(
-                child: TabletopBoardWidget(
-                  cards: _previewBoard.cards,
-                  showRegistrationGuide: true,
-                  showBadges: false,
-                ),
-              ),
-              const SizedBox(height: 10),
-
-              // Card count ('12 / 12 CARDS' + '기기 내 분석')
-              GestureDetector(
-                onTap: _showCloudAndScenarioSheet,
-                child: const Row(
+      body: WoodTabletopBackground(
+        child: SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 12.0),
+            child: Column(
+              children: [
+                // Capture controls (#8:11029, 345x44): Flash icon | Automatic/Manual pill switch | Help/Cloud icon
+                Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    Text(
-                      '12 / 12 CARDS',
+                    SetIconButton(
+                      icon: _flashOff ? Icons.flash_off : Icons.flash_on,
+                      iconColor: _flashOff
+                          ? SetColors.textPrimary
+                          : SetColors.cyanAccent,
+                      tooltip: '플래시 전환',
+                      onPressed: () => setState(() => _flashOff = !_flashOff),
+                    ),
+                    // Capture mode switch (#8:11032: 180x40, rgba(15,23,42,0.80), stroke #334155)
+                    Container(
+                      width: 180,
+                      height: 40,
+                      padding: const EdgeInsets.all(4),
+                      decoration: BoxDecoration(
+                        color: SetColors.glassSlate900,
+                        borderRadius: BorderRadius.circular(100),
+                        border: Border.all(color: SetColors.borderSlate700),
+                      ),
+                      child: Row(
+                        children: [
+                          Expanded(
+                            child: GestureDetector(
+                              onTap: () => setState(() => _isAutoMode = true),
+                              child: Container(
+                                alignment: Alignment.center,
+                                decoration: BoxDecoration(
+                                  color: _isAutoMode
+                                      ? SetColors.cyanAccent
+                                      : Colors.transparent,
+                                  borderRadius: BorderRadius.circular(100),
+                                ),
+                                child: Text(
+                                  '자동',
+                                  style: TextStyle(
+                                    fontSize: 13,
+                                    fontWeight: _isAutoMode
+                                        ? FontWeight.w700
+                                        : FontWeight.w400,
+                                    color: _isAutoMode
+                                        ? SetColors.bgSlate900
+                                        : SetColors.textPrimary,
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ),
+                          Expanded(
+                            child: GestureDetector(
+                              onTap: () => setState(() => _isAutoMode = false),
+                              child: Container(
+                                alignment: Alignment.center,
+                                decoration: BoxDecoration(
+                                  color: !_isAutoMode
+                                      ? SetColors.cyanAccent
+                                      : Colors.transparent,
+                                  borderRadius: BorderRadius.circular(100),
+                                ),
+                                child: Text(
+                                  '수동',
+                                  style: TextStyle(
+                                    fontSize: 13,
+                                    fontWeight: !_isAutoMode
+                                        ? FontWeight.w700
+                                        : FontWeight.w400,
+                                    color: !_isAutoMode
+                                        ? SetColors.bgSlate900
+                                        : SetColors.textPrimary,
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    SetIconButton(
+                      icon: Icons.help_outline,
+                      tooltip: '가이드 및 클라우드/시나리오 설정',
+                      onPressed: _showCloudAndScenarioSheet,
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 10),
+
+                // Realtime status (#8:11026: 5x5 dot + '실시간 인식 중')
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Container(
+                      width: 5,
+                      height: 5,
+                      decoration: const BoxDecoration(
+                        color: SetColors.cyanAccent,
+                        shape: BoxShape.circle,
+                      ),
+                    ),
+                    const SizedBox(width: 7),
+                    const Text(
+                      '실시간 인식 중',
                       style: TextStyle(
-                        fontFamily: 'IBM Plex Mono',
                         fontSize: 12,
                         color: SetColors.textPrimary,
                       ),
                     ),
-                    Row(
-                      children: [
-                        Icon(
-                          Icons.memory,
-                          size: 14,
-                          color: SetColors.cyanAccent,
-                        ),
-                        SizedBox(width: 4),
-                        Text(
-                          '기기 내 분석',
-                          style: TextStyle(
-                            fontSize: 11,
-                            color: SetColors.cyanAccent,
-                          ),
-                        ),
-                      ],
-                    ),
                   ],
                 ),
-              ),
-              const SizedBox(height: 10),
+                const SizedBox(height: 12),
 
-              // Capture guidance
-              const Text(
-                '카드를 프레임 안에 맞춰주세요',
-                style: TextStyle(
-                  fontSize: 17,
-                  fontWeight: FontWeight.w700,
-                  color: SetColors.textPrimary,
-                ),
-              ),
-              const SizedBox(height: 4),
-              Text(
-                _isAutoMode
-                    ? '화면이 안정되면 자동으로 촬영합니다.'
-                    : '셔터 버튼을 눌러 카드를 촬영하세요.',
-                style: const TextStyle(
-                  fontSize: 12,
-                  color: SetColors.textSecondary,
-                ),
-              ),
-              const SizedBox(height: 16),
-
-              // Bottom controls: Album import | Shutter (80x80) | Offline manual attribute input
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                crossAxisAlignment: CrossAxisAlignment.center,
-                children: [
-                  // Album import action
-                  SizedBox(
-                    width: 88,
-                    child: Column(
-                      children: [
-                        SetIconButton(
-                          icon: Icons.image_outlined,
-                          tooltip: '앨범 가져오기',
-                          onPressed: () =>
-                              widget.onDetectedSets(_previewBoard),
-                        ),
-                        const SizedBox(height: 6),
-                        const Text(
-                          '앨범 가져오기',
-                          style: TextStyle(
-                            fontSize: 12,
-                            color: SetColors.textPrimary,
-                          ),
-                        ),
-                      ],
-                    ),
+                // Registration overlay (#8:11012: Guide / Twelve card positions 3x4)
+                Expanded(
+                  child: TabletopBoardWidget(
+                    cards: _previewBoard.cards,
+                    showRegistrationGuide: true,
+                    showBadges: false,
                   ),
+                ),
+                const SizedBox(height: 10),
 
-                  // Capture shutter (80x80 ring + 64x64 face + 8x8 cyan dot)
-                  Column(
+                // Card count (#8:11007: '12 / 12 CARDS' + '기기 내 분석')
+                GestureDetector(
+                  onTap: _showCloudAndScenarioSheet,
+                  child: const Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      GestureDetector(
-                        onTap: () => widget.onDetectedSets(_previewBoard),
-                        child: Container(
-                          width: 80,
-                          height: 80,
-                          alignment: Alignment.center,
-                          decoration: BoxDecoration(
-                            shape: BoxShape.circle,
-                            border: Border.all(
-                              color: SetColors.textPrimary,
-                              width: 2.5,
-                            ),
-                          ),
-                          child: Container(
-                            width: 64,
-                            height: 64,
-                            alignment: Alignment.center,
-                            decoration: const BoxDecoration(
-                              color: SetColors.textPrimary,
-                              shape: BoxShape.circle,
-                            ),
-                            child: Container(
-                              width: 8,
-                              height: 8,
-                              decoration: const BoxDecoration(
-                                color: SetColors.cyanAccent,
-                                shape: BoxShape.circle,
-                              ),
-                            ),
-                          ),
+                      Text(
+                        '12 / 12 CARDS',
+                        style: TextStyle(
+                          fontFamily: 'IBM Plex Mono',
+                          fontSize: 12,
+                          color: SetColors.textPrimary,
                         ),
                       ),
-                      const SizedBox(height: 6),
-                      Text(
-                        _isAutoMode ? '자동 촬영 대기' : '탭하여 촬영',
-                        style: const TextStyle(
-                          fontSize: 11,
-                          color: SetColors.textSecondary,
-                        ),
+                      Row(
+                        children: [
+                          Icon(
+                            Icons.memory,
+                            size: 13,
+                            color: SetColors.cyanAccent,
+                          ),
+                          SizedBox(width: 5),
+                          Text(
+                            '기기 내 분석',
+                            style: TextStyle(
+                              fontSize: 11,
+                              color: SetColors.cyanAccent,
+                            ),
+                          ),
+                        ],
                       ),
                     ],
                   ),
+                ),
+                const SizedBox(height: 10),
 
-                  // Offline manual attribute input ('수동 속성 입력' / '오프라인 사용 가능')
-                  SizedBox(
-                    width: 88,
-                    child: Column(
-                      children: [
-                        SetIconButton(
-                          icon: Icons.tune,
-                          tooltip: '수동 속성 입력',
-                          onPressed: _openManualSolverSheet,
-                        ),
-                        const SizedBox(height: 6),
-                        const Text(
-                          '수동 속성 입력',
-                          style: TextStyle(
-                            fontSize: 12,
-                            color: SetColors.textPrimary,
+                // Capture guidance (#8:11004)
+                const Text(
+                  '카드를 프레임 안에 맞춰주세요',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    fontSize: 17,
+                    fontWeight: FontWeight.w700,
+                    color: SetColors.textPrimary,
+                  ),
+                ),
+                const SizedBox(height: 6),
+                Text(
+                  _isAutoMode
+                      ? '화면이 안정되면 자동으로 촬영합니다.'
+                      : '셔터 버튼을 눌러 카드를 촬영하세요.',
+                  textAlign: TextAlign.center,
+                  style: const TextStyle(
+                    fontSize: 12,
+                    color: SetColors.textSecondary,
+                  ),
+                ),
+                const SizedBox(height: 16),
+
+                // Bottom controls: Album import (#8:10995) | Shutter (#8:10999) | Offline manual attribute input (#8:10990)
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  crossAxisAlignment: CrossAxisAlignment.center,
+                  children: [
+                    // Album import action
+                    SizedBox(
+                      width: 88,
+                      child: Column(
+                        children: [
+                          SetIconButton(
+                            icon: Icons.image_outlined,
+                            tooltip: '앨범 가져오기',
+                            onPressed: () =>
+                                widget.onDetectedSets(_previewBoard),
                           ),
+                          const SizedBox(height: 8),
+                          const Text(
+                            '앨범 가져오기',
+                            style: TextStyle(
+                              fontSize: 12,
+                              color: SetColors.textPrimary,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+
+                    // Capture shutter (#8:12314: 80x80 ring + 64x64 face + 8x8 cyan dot)
+                    Column(
+                      children: [
+                        SetShutterButton(
+                          onPressed: () => widget.onDetectedSets(_previewBoard),
                         ),
-                        const Text(
-                          '오프라인 사용 가능',
-                          style: TextStyle(
-                            fontSize: 10,
+                        const SizedBox(height: 8),
+                        Text(
+                          _isAutoMode ? '자동 촬영 대기' : '탭하여 촬영',
+                          style: const TextStyle(
+                            fontSize: 11,
                             color: SetColors.textSecondary,
                           ),
                         ),
                       ],
                     ),
-                  ),
-                ],
-              ),
-            ],
+
+                    // Offline manual attribute input ('수동 속성 입력' / '오프라인 사용 가능')
+                    SizedBox(
+                      width: 104,
+                      child: Column(
+                        children: [
+                          SetIconButton(
+                            icon: Icons.tune,
+                            tooltip: '수동 속성 입력',
+                            onPressed: _openManualSolverSheet,
+                          ),
+                          const SizedBox(height: 8),
+                          const Text(
+                            '수동 속성 입력',
+                            style: TextStyle(
+                              fontSize: 12,
+                              color: SetColors.textPrimary,
+                            ),
+                          ),
+                          const Text(
+                            '오프라인 사용 가능',
+                            style: TextStyle(
+                              fontSize: 10,
+                              color: SetColors.textSecondary,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
           ),
         ),
       ),
@@ -536,8 +511,8 @@ class _CloudSettingsAndScenarioSheetState
               ListTile(
                 contentPadding: EdgeInsets.zero,
                 leading: const Icon(Icons.auto_awesome, color: SetColors.cyanAccent),
-                title: const Text('03 탐지 결과 · 3 SETs 발견'),
-                subtitle: const Text('12장 카드 중 유효한 3가지 SET 조합 검출'),
+                title: const Text('03 탐지 결과 · 세트 존재 여부'),
+                subtitle: const Text('12장 분석 완료 · 세트가 발견되었어요 화면'),
                 onTap: widget.onSelectThreeSets,
               ),
               ListTile(

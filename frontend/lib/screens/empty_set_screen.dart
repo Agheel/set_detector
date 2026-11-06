@@ -18,12 +18,13 @@ class EmptySetScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: SetColors.bgSlate900,
-      body: SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 12.0),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
+      body: WoodTabletopBackground(
+        child: SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 12.0),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
               // Empty result navigation (345x44): Back icon | '분석 완료' | '0 SET'
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -134,6 +135,7 @@ class EmptySetScreen extends StatelessWidget {
           ),
         ),
       ),
+    ),
     );
   }
 }

@@ -52,103 +52,113 @@ class OnboardingScreen extends StatelessWidget {
               ),
               const SizedBox(height: 28),
 
-              // Three card connection illustration (345x240)
+              // Three card connection illustration (#8:10930, 345x240)
               SizedBox(
                 height: 240,
-                child: Container(
-                  decoration: BoxDecoration(
-                    color: SetColors.surfaceSlate800.withOpacity(0.45),
-                    borderRadius: BorderRadius.circular(16),
-                    border: Border.all(
-                      color: SetColors.borderSlate700.withOpacity(0.5),
-                    ),
-                  ),
-                  child: Stack(
-                    children: [
-                      // Precision grid lines
-                      Positioned.fill(
-                        child: CustomPaint(
-                          painter: _PrecisionGridPainter(),
+                child: LayoutBuilder(
+                  builder: (context, constraints) {
+                    final w = constraints.maxWidth;
+                    final scaleX = w / 345.0;
+                    return Stack(
+                      clipBehavior: Clip.none,
+                      children: [
+                        // Precision grid lines (#8:10963..#8:10972)
+                        Positioned.fill(
+                          child: CustomPaint(
+                            painter: _PrecisionGridPainter(scaleX: scaleX),
+                          ),
                         ),
-                      ),
-                      // 3 Illustrated cards + Neon Connection Lines
-                      Padding(
-                        padding: const EdgeInsets.only(
-                          left: 16,
-                          right: 16,
-                          top: 24,
-                          bottom: 36,
+                        // Card 1 (#8:10958: x:0, y:48, 88x124)
+                        Positioned(
+                          left: 0,
+                          top: 48,
+                          child: PlayingCardWidget(
+                            card: SetCard.fromAttributes(1, 3, 3, 1),
+                            width: 88,
+                            height: 124,
+                          ),
                         ),
-                        child: Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: [
-                            PlayingCardWidget(
-                              card: SetCard.fromAttributes(1, 3, 3, 1),
-                              width: 84,
-                              height: 116,
-                            ),
-                            PlayingCardWidget(
-                              card: SetCard.fromAttributes(2, 2, 2, 2),
-                              width: 84,
-                              height: 116,
-                            ),
-                            PlayingCardWidget(
-                              card: SetCard.fromAttributes(3, 1, 1, 3),
-                              width: 84,
-                              height: 116,
-                            ),
-                          ],
+                        // Card 2 (#8:10948: x:128, y:0, 88x124)
+                        Positioned(
+                          left: 128 * scaleX,
+                          top: 0,
+                          child: PlayingCardWidget(
+                            card: SetCard.fromAttributes(2, 2, 2, 2),
+                            width: 88,
+                            height: 124,
+                          ),
                         ),
-                      ),
-                      // Illustration annotation bar
-                      const Positioned(
-                        left: 16,
-                        right: 16,
-                        bottom: 12,
-                        child: Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: [
-                            Text(
-                              'VISION / FOUR ATTRIBUTES',
-                              style: TextStyle(
-                                fontFamily: 'IBM Plex Mono',
-                                fontSize: 10,
-                                color: SetColors.textSecondary,
+                        // Card 3 (#8:10937: x:256, y:80, 88x124)
+                        Positioned(
+                          left: 256 * scaleX,
+                          top: 80,
+                          child: PlayingCardWidget(
+                            card: SetCard.fromAttributes(3, 1, 1, 3),
+                            width: 88,
+                            height: 124,
+                          ),
+                        ),
+                        // Cyan / Rose / Amber connection lines (#8:10934..#8:10936)
+                        Positioned.fill(
+                          child: IgnorePointer(
+                            child: CustomPaint(
+                              painter: _IllustrationConnectionPainter(
+                                scaleX: scaleX,
                               ),
                             ),
-                            Text(
-                              'SET VERIFIED ✓',
-                              style: TextStyle(
-                                fontFamily: 'IBM Plex Mono',
-                                fontSize: 10,
-                                fontWeight: FontWeight.w600,
-                                color: SetColors.cyanAccent,
-                              ),
-                            ),
-                          ],
+                          ),
                         ),
-                      ),
-                    ],
-                  ),
+                        // Illustration annotation bar (#8:10931: y:220)
+                        const Positioned(
+                          left: 0,
+                          right: 0,
+                          bottom: 0,
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              Text(
+                                'VISION / FOUR ATTRIBUTES',
+                                style: TextStyle(
+                                  fontFamily: 'IBM Plex Mono',
+                                  fontSize: 10,
+                                  color: SetColors.textSecondary,
+                                ),
+                              ),
+                              Text(
+                                'SET VERIFIED ✓',
+                                style: TextStyle(
+                                  fontFamily: 'IBM Plex Mono',
+                                  fontSize: 10,
+                                  fontWeight: FontWeight.w600,
+                                  color: SetColors.cyanAccent,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    );
+                  },
                 ),
               ),
               const SizedBox(height: 28),
 
-              // Introduction (Main message 29px Bold + Supporting message 14px)
+              // Introduction (#8:10927: Main message 29px Bold + Supporting message 14px)
               const Text(
                 '카메라를 비추면\nAI가 세트를 즉시 찾아냅니다.',
                 style: TextStyle(
-                  fontSize: 28,
-                  height: 1.3,
+                  fontSize: 29,
+                  height: 1.45,
                   fontWeight: FontWeight.w700,
                   color: SetColors.textPrimary,
                 ),
               ),
-              const SizedBox(height: 12),
+              const SizedBox(height: 16),
               const Text(
                 '복잡한 조합은 AI에게, 발견의 즐거움은 당신에게.',
                 style: TextStyle(
                   fontSize: 14,
+                  height: 1.7,
                   color: SetColors.textSecondary,
                 ),
               ),
@@ -210,25 +220,43 @@ class OnboardingScreen extends StatelessWidget {
 }
 
 class _PrecisionGridPainter extends CustomPainter {
+  final double scaleX;
+
+  const _PrecisionGridPainter({this.scaleX = 1.0});
+
   @override
   void paint(Canvas canvas, Size size) {
     final gridPaint = Paint()
       ..color = SetColors.borderSlate700.withOpacity(0.33)
       ..strokeWidth = 1;
 
-    for (var i = 1; i <= 5; i++) {
-      final x = size.width * (i / 6);
+    // Exact Figma vertical lines: x = 0, 64, 128, 192, 256, 320
+    for (final rawX in const [0.0, 64.0, 128.0, 192.0, 256.0, 320.0]) {
+      final x = rawX * scaleX;
       canvas.drawLine(Offset(x, 0), Offset(x, size.height), gridPaint);
     }
-    for (var j = 1; j <= 3; j++) {
-      final y = size.height * (j / 4);
+    // Exact Figma horizontal lines: y = 16, 80, 144, 208
+    for (final y in const [16.0, 80.0, 144.0, 208.0]) {
       canvas.drawLine(Offset(0, y), Offset(size.width, y), gridPaint);
     }
+  }
 
-    // 3-color connection lines (Cyan, Rose, Amber)
-    final p1 = Offset(size.width * 0.18, size.height * 0.45);
-    final p2 = Offset(size.width * 0.50, size.height * 0.36);
-    final p3 = Offset(size.width * 0.82, size.height * 0.45);
+  @override
+  bool shouldRepaint(covariant _PrecisionGridPainter oldDelegate) =>
+      oldDelegate.scaleX != scaleX;
+}
+
+class _IllustrationConnectionPainter extends CustomPainter {
+  final double scaleX;
+
+  const _IllustrationConnectionPainter({this.scaleX = 1.0});
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    // Card centers in Figma #8:10930: (44, 110), (172, 62), (300, 142)
+    final p1 = Offset(44 * scaleX, 110);
+    final p2 = Offset(172 * scaleX, 62);
+    final p3 = Offset(300 * scaleX, 142);
 
     canvas.drawLine(
       p1,
@@ -251,8 +279,23 @@ class _PrecisionGridPainter extends CustomPainter {
         ..color = SetColors.amberAccent
         ..strokeWidth = 2.0,
     );
+
+    final anchorBorder = Paint()
+      ..color = SetColors.bgSlate900
+      ..strokeWidth = 2.0
+      ..style = PaintingStyle.stroke;
+
+    for (final entry in [
+      MapEntry(p1, SetColors.cyanAccent),
+      MapEntry(p2, SetColors.roseAccent),
+      MapEntry(p3, SetColors.amberAccent),
+    ]) {
+      canvas.drawCircle(entry.key, 4.0, Paint()..color = entry.value);
+      canvas.drawCircle(entry.key, 4.0, anchorBorder);
+    }
   }
 
   @override
-  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
+  bool shouldRepaint(covariant _IllustrationConnectionPainter oldDelegate) =>
+      oldDelegate.scaleX != scaleX;
 }
