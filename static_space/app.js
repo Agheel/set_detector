@@ -336,15 +336,78 @@
     }
   }
 
-  // Run YOLOv11 ONNX inference on an HTMLImageElement or HTMLVideoElement
-  async function runYoloOnnxInference(sourceEl) {
-    if (!ortSession) return null;
+  // 4-Stage SET Card Preprocessing:
+  // 1) Card-White Auto White Balance (92nd percentile RGB reference, clamped [0.75, 1.35])
+  // 2) Hue-preserving mild contrast stretch around midpoint (128.0)
+  // 3) 3x3 Unsharp Mask to sharpen fine Striped (L) vs Solid (S) / Open (E) card interiors
+  function preprocessCanvasRgba(rgba, size) {
+    const area = size * size;
+    const rSamples = [];
+    const gSamples = [];
+    const bSamples = [];
+    const step = 16; // Fast subsampling for 92nd percentile estimation
+    for (let i = 0; i < area; i += step) {
+      const idx = i * 4;
+      rSamples.push(rgba[idx]);
+      gSamples.push(rgba[idx + 1]);
+      bSamples.push(rgba[idx + 2]);
+    }
+    rSamples.sort((a, b) => a - b);
+    gSamples.sort((a, b) => a - b);
+    bSamples.sort((a, b) => a - b);
+    const p92 = Math.floor(rSamples.length * 0.92);
+    const refR = Math.max(30, rSamples[p92] || 200);
+    const refG = Math.max(30, gSamples[p92] || 200);
+    const refB = Math.max(30, bSamples[p92] || 200);
+    const targetLum = (refR + refG + refB) / 3.0;
+    const gainR = Math.min(1.35, Math.max(0.75, targetLum / refR));
+    const gainG = Math.min(1.35, Math.max(0.75, targetLum / refG));
+    const gainB = Math.min(1.35, Math.max(0.75, targetLum / refB));
+
+    const rPlane = new Float32Array(area);
+    const gPlane = new Float32Array(area);
+    const bPlane = new Float32Array(area);
+    for (let i = 0; i < area; i++) {
+      const idx = i * 4;
+      rPlane[i] = (rgba[idx] * gainR - 128.0) * 1.08 + 128.0;
+      gPlane[i] = (rgba[idx + 1] * gainG - 128.0) * 1.08 + 128.0;
+      bPlane[i] = (rgba[idx + 2] * gainB - 128.0) * 1.08 + 128.0;
+    }
+
+    // 3x3 Unsharp Mask -> normalized [0, 1] CHW tensor
+    const floatData = new Float32Array(3 * area);
+    const planes = [rPlane, gPlane, bPlane];
+    for (let c = 0; c < 3; c++) {
+      const src = planes[c];
+      const offset = c * area;
+      for (let y = 0; y < size; y++) {
+        const y0 = Math.max(0, y - 1) * size;
+        const y1 = y * size;
+        const y2 = Math.min(size - 1, y + 1) * size;
+        for (let x = 0; x < size; x++) {
+          const x0 = Math.max(0, x - 1);
+          const x2 = Math.min(size - 1, x + 1);
+          const blur =
+            (src[y0 + x0] + src[y0 + x] + src[y0 + x2] +
+             src[y1 + x0] + src[y1 + x] + src[y1 + x2] +
+             src[y2 + x0] + src[y2 + x] + src[y2 + x2]) / 9.0;
+          const val = src[y1 + x] * 1.25 - blur * 0.25;
+          floatData[offset + y1 + x] = Math.min(255, Math.max(0, val)) / 255.0;
+        }
+      }
+    }
+    return floatData;
+  }
+
+  async function runSingleYoloPass(sourceEl, cropRect) {
     const size = 640;
-    const srcW = sourceEl.videoWidth || sourceEl.naturalWidth || size;
-    const srcH = sourceEl.videoHeight || sourceEl.naturalHeight || size;
-    const scale = Math.min(size / srcW, size / srcH);
-    const drawW = Math.round(srcW * scale);
-    const drawH = Math.round(srcH * scale);
+    const sx = cropRect.x;
+    const sy = cropRect.y;
+    const sw = cropRect.w;
+    const sh = cropRect.h;
+    const scale = Math.min(size / sw, size / sh);
+    const drawW = Math.round(sw * scale);
+    const drawH = Math.round(sh * scale);
     const padX = Math.floor((size - drawW) / 2);
     const padY = Math.floor((size - drawH) / 2);
 
@@ -354,17 +417,10 @@
     const ctx = canvas.getContext('2d');
     ctx.fillStyle = '#727272';
     ctx.fillRect(0, 0, size, size);
-    ctx.drawImage(sourceEl, padX, padY, drawW, drawH);
+    ctx.drawImage(sourceEl, sx, sy, sw, sh, padX, padY, drawW, drawH);
     const { data } = ctx.getImageData(0, 0, size, size);
 
-    const floatData = new Float32Array(3 * size * size);
-    const area = size * size;
-    for (let i = 0; i < area; i++) {
-      floatData[i] = data[i * 4] / 255.0;
-      floatData[area + i] = data[i * 4 + 1] / 255.0;
-      floatData[2 * area + i] = data[i * 4 + 2] / 255.0;
-    }
-
+    const floatData = preprocessCanvasRgba(data, size);
     const inputTensor = new ort.Tensor('float32', floatData, [1, 3, size, size]);
     const inputName = ortSession.inputNames[0];
     const outputs = await ortSession.run({ [inputName]: inputTensor });
@@ -424,17 +480,53 @@
       if (picked.length >= 12) break;
     }
 
-    if (picked.length < 3) return null;
     // Sort top-to-bottom (4 rows), left-to-right (3 cols)
     picked.sort((a, b) => (Math.abs(a.cy - b.cy) > 55 ? a.cy - b.cy : a.cx - b.cx));
 
     const cards = [];
+    let scoreSum = 0;
     for (const item of picked) {
       const label = YOLO_LABELS[item.cls];
       const parsed = parseCompactLabel(label);
-      if (parsed) cards.push(parsed);
+      if (parsed) {
+        cards.push(parsed);
+        scoreSum += item.score;
+      }
     }
-    return cards.length >= 3 ? cards : null;
+    return { cards, scoreSum };
+  }
+
+  // Dual-Pass YOLOv11 ONNX Inference (Pass 1: 3x4 Guide ROI Crop, Pass 2: Full Frame Letterbox)
+  async function runYoloOnnxInference(sourceEl) {
+    if (!ortSession) return null;
+    const srcW = sourceEl.videoWidth || sourceEl.naturalWidth || 640;
+    const srcH = sourceEl.videoHeight || sourceEl.naturalHeight || 640;
+
+    // Pass 1: Central 3x4 Guide ROI crop on portrait frames (doubles effective card resolution)
+    let bestResult = { cards: [], scoreSum: 0 };
+    if (srcH > srcW * 1.15) {
+      const roiRect = {
+        x: Math.round(srcW * 0.05),
+        y: Math.round(srcH * 0.14),
+        w: Math.round(srcW * 0.90),
+        h: Math.round(srcH * 0.66),
+      };
+      bestResult = await runSingleYoloPass(sourceEl, roiRect);
+    }
+
+    // Pass 2: Full-frame letterbox fallback if fewer than 12 cards were found in ROI
+    if (bestResult.cards.length < 12) {
+      const fullResult = await runSingleYoloPass(sourceEl, { x: 0, y: 0, w: srcW, h: srcH });
+      if (
+        fullResult.cards.length > bestResult.cards.length ||
+        (fullResult.cards.length === bestResult.cards.length &&
+          fullResult.scoreSum > bestResult.scoreSum)
+      ) {
+        bestResult = fullResult;
+      }
+    }
+
+    return bestResult.cards.length >= 3 ? bestResult.cards : null;
   }
 
   async function triggerCaptureAndAnalyze(sourceEl) {

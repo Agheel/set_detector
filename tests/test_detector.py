@@ -7,6 +7,8 @@ import pytest
 from set_engine.detector import (
     MockCardDetector,
     YoloCardDetector,
+    crop_guide_roi,
+    preprocess_card_image,
     validate_image_security,
 )
 from set_engine.models import Card
@@ -148,3 +150,62 @@ def test_yolo_load_model_error() -> None:
     with pytest.raises(RuntimeError, match="Failed to load YOLO model"):
         # Passing an invalid or non-existent file path directly to _load_yolo_model
         YoloCardDetector._load_yolo_model("non_existent_invalid_path.pt")
+
+
+def test_preprocess_card_image_and_crop_guide_roi() -> None:
+    # Simulate warm yellow-cast indoor image
+    warm_img = np.zeros((400, 200, 3), dtype=np.uint8)
+    warm_img[:, :, 0] = 240  # Red cast
+    warm_img[:, :, 1] = 210  # Green
+    warm_img[:, :, 2] = 160  # Blue deficit
+
+    enhanced = preprocess_card_image(warm_img)
+    assert enhanced.shape == warm_img.shape
+    assert enhanced.dtype == np.uint8
+    # Blue channel should be boosted toward white balance
+    assert int(np.mean(enhanced[:, :, 2])) > int(np.mean(warm_img[:, :, 2]))
+
+    roi, off_x, off_y = crop_guide_roi(enhanced)
+    assert roi.shape[0] < enhanced.shape[0]
+    assert roi.shape[1] < enhanced.shape[1]
+    assert off_x > 0
+    assert off_y > 0
+
+    # Small image fallback in crop_guide_roi
+    tiny = np.zeros((36, 36, 3), dtype=np.uint8)
+    roi_tiny, tx, ty = crop_guide_roi(tiny)
+    assert roi_tiny.shape == tiny.shape
+    assert tx == 0.0 and ty == 0.0
+
+
+@patch("set_engine.detector.YoloCardDetector._load_yolo_model")
+def test_yolo_detector_portrait_roi_dual_pass(
+    mock_load: MagicMock,
+    tmp_path: pytest.TempPathFactory,
+) -> None:
+    dummy_pt = tmp_path / "dummy.pt"
+    dummy_pt.write_bytes(b"dummy")
+
+    mock_model = MagicMock()
+    mock_load.return_value = mock_model
+    detector = YoloCardDetector(weights_path=str(dummy_pt), conf_threshold=0.25)
+
+    # Pass 1 (full frame) returns 0 boxes; Pass 2 (portrait ROI crop) returns 1 box
+    res_empty = MagicMock()
+    res_empty.boxes = []
+
+    box_roi = MagicMock()
+    box_roi.xyxy = [np.array([10.0, 20.0, 50.0, 60.0])]
+    box_roi.conf = [MagicMock(item=lambda: 0.92)]
+    box_roi.cls = [MagicMock(item=lambda: 0)]
+    res_roi = MagicMock()
+    res_roi.boxes = [box_roi]
+    res_roi.names = {0: "GDE1"}
+
+    mock_model.side_effect = [[res_empty], [res_roi]]
+
+    portrait_img = np.full((400, 200, 3), 200, dtype=np.uint8)
+    detected = detector.detect(portrait_img)
+    assert len(detected) == 1
+    assert detected[0].box.x1 > 10.0
+    assert detected[0].box.y1 > 20.0

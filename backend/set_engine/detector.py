@@ -3,7 +3,7 @@
 from abc import ABC, abstractmethod
 import os
 import sys
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, Tuple
 import numpy as np
 
 from set_engine.models import (
@@ -102,6 +102,45 @@ def validate_image_security(image: np.ndarray, max_dim: int = 4096) -> None:
         raise ValueError(
             f"Image dimensions ({width}x{height}) exceed maximum allowed dimension ({max_dim})."
         )
+
+
+def preprocess_card_image(image: np.ndarray) -> np.ndarray:
+    """Enhance SET card image via card-white auto white balance, contrast, and unsharp mask."""
+    validate_image_security(image)
+    img_f = image.astype(np.float32)
+
+    # 1. Card-White Auto White Balance (92nd percentile reference, clamped to [0.75, 1.35])
+    white_ref = np.percentile(img_f, 92, axis=(0, 1))
+    target_lum = float(np.mean(white_ref))
+    gains = np.clip(target_lum / np.maximum(white_ref, 30.0), 0.75, 1.35)
+    balanced = img_f * gains
+
+    # 2. Hue-preserving mild contrast stretch around midpoint (128.0)
+    contrasted = (balanced - 128.0) * 1.08 + 128.0
+
+    # 3. Fast 3x3 Unsharp Mask to sharpen striped (L) vs solid (S) / open (E) card interiors
+    padded = np.pad(contrasted, ((1, 1), (1, 1), (0, 0)), mode="edge")
+    blurred = (
+        padded[:-2, :-2] + padded[:-2, 1:-1] + padded[:-2, 2:]
+        + padded[1:-1, :-2] + padded[1:-1, 1:-1] + padded[1:-1, 2:]
+        + padded[2:, :-2] + padded[2:, 1:-1] + padded[2:, 2:]
+    ) / 9.0
+    sharpened = contrasted * 1.25 - blurred * 0.25
+    return np.clip(sharpened, 0, 255).astype(np.uint8)
+
+
+def crop_guide_roi(image: np.ndarray) -> Tuple[np.ndarray, float, float]:
+    """Crop central 3x4 viewfinder guide region from portrait smartphone captures."""
+    height, width = image.shape[:2]
+    x_off = int(round(width * 0.05))
+    y_top = int(round(height * 0.14))
+    y_bot = int(round(height * 0.80))
+    x_end = max(x_off + 32, width - x_off)
+    y_end = max(y_top + 32, y_bot)
+    roi = image[y_top:y_end, x_off:x_end]
+    if roi.shape[0] < 32 or roi.shape[1] < 32:
+        return image, 0.0, 0.0
+    return roi, float(x_off), float(y_top)
 
 
 class MockCardDetector(ICardDetector):
@@ -247,10 +286,13 @@ class YoloCardDetector(ICardDetector):
                 return self.parse_class_label(raw_label)
         return self.class_id_to_card(cls_id)
 
-    def detect(self, image: np.ndarray) -> List[DetectedCard]:
-        """Run YOLO inference on validated image and parse detected cards."""
-        validate_image_security(image)
-
+    def _run_single_pass(
+        self,
+        image: np.ndarray,
+        offset_x: float = 0.0,
+        offset_y: float = 0.0,
+    ) -> List[DetectedCard]:
+        """Run a single YOLO forward pass and shift bounding boxes by (offset_x, offset_y)."""
         results = self._model(
             image,
             conf=self._conf_threshold,
@@ -258,7 +300,6 @@ class YoloCardDetector(ICardDetector):
             verbose=False,
         )
         detected: List[DetectedCard] = []
-
         if not results:
             return detected
 
@@ -268,27 +309,39 @@ class YoloCardDetector(ICardDetector):
             return detected
 
         names = getattr(first_res, "names", getattr(self._model, "names", None))
-
         for box_item in boxes:
             coords = box_item.xyxy[0].tolist()
             conf = float(box_item.conf[0].item())
             cls_id = int(box_item.cls[0].item())
-
             try:
                 card = self._resolve_card(cls_id, names)
             except ValueError:
                 continue
 
             box = BoundingBox(
-                x1=float(coords[0]),
-                y1=float(coords[1]),
-                x2=float(coords[2]),
-                y2=float(coords[3]),
+                x1=float(coords[0]) + offset_x,
+                y1=float(coords[1]) + offset_y,
+                x2=float(coords[2]) + offset_x,
+                y2=float(coords[3]) + offset_y,
                 confidence=conf,
             )
             detected.append(DetectedCard(index=len(detected), card=card, box=box))
-
         return detected
+
+    def detect(self, image: np.ndarray) -> List[DetectedCard]:
+        """Run preprocessed dual-pass YOLO inference (full frame + portrait guide ROI)."""
+        validate_image_security(image)
+        enhanced = preprocess_card_image(image)
+        primary = self._run_single_pass(enhanced)
+
+        height, width = enhanced.shape[:2]
+        if len(primary) < 12 and height > int(width * 1.15):
+            roi, off_x, off_y = crop_guide_roi(enhanced)
+            roi_cards = self._run_single_pass(roi, offset_x=off_x, offset_y=off_y)
+            if len(roi_cards) > len(primary):
+                return roi_cards
+
+        return primary
 
 
 def discover_weights_path(weights_dir: str = DEFAULT_WEIGHTS_DIR) -> Optional[str]:
