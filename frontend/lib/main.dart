@@ -78,6 +78,12 @@ class _SetDetectorAppState extends State<SetDetectorApp> {
             _selectedSetIndex = setIdx;
             _step = AppFlowStep.setDetail;
           }),
+          onResultUpdated: (updated) => setState(() {
+            _currentResult = updated;
+            _step = updated.sets.isEmpty
+                ? AppFlowStep.emptySet
+                : AppFlowStep.detectionResult;
+          }),
         );
 
       case AppFlowStep.setDetail:

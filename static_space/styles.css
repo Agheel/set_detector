@@ -617,3 +617,76 @@ body {
   flex-direction: column;
   gap: 14px;
 }
+
+/* Single-Card Tap-to-Edit Attribute Controls */
+.attr-group {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.attr-label {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--text-secondary);
+}
+
+.attr-options {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 6px;
+}
+
+.attr-pill {
+  height: 36px;
+  border-radius: 10px;
+  border: 1px solid var(--border-slate-700);
+  background: var(--bg-slate-900);
+  color: var(--text-primary);
+  font-family: inherit;
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.attr-pill.active {
+  background: var(--cyan-tint-12);
+  border-color: var(--cyan-accent);
+  color: var(--cyan-accent);
+  font-weight: 700;
+}
+
+.add-card-slot {
+  width: 88px;
+  height: 80px;
+  border-radius: 8px;
+  border: 1.5px dashed rgba(6, 182, 212, 0.55);
+  background: rgba(15, 23, 42, 0.35);
+  color: var(--cyan-accent);
+  font-size: 11px;
+  font-weight: 600;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  cursor: pointer;
+}
+
+.card-edit-hint {
+  position: absolute;
+  bottom: 2px;
+  right: 2px;
+  width: 18px;
+  height: 18px;
+  border-radius: 5px;
+  background: rgba(15, 23, 42, 0.82);
+  border: 1px solid rgba(248, 250, 252, 0.25);
+  color: var(--text-secondary);
+  font-size: 9px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+}

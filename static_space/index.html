@@ -123,7 +123,8 @@
           </button>
         </div>
 
-        <div style="text-align:center;font-size:12px;margin:12px 0 14px;" id="result-summary-line">12장 분석 완료 · 세트 존재 여부 확인</div>
+        <div style="text-align:center;font-size:12px;margin:10px 0 4px;" id="result-summary-line">12장 분석 완료 · 세트 존재 여부 확인</div>
+        <div style="text-align:center;font-size:11px;color:var(--cyan-accent);margin-bottom:10px;">💡 잘못 인식된 카드는 터치해서 바로 속성을 수정할 수 있어요</div>
 
         <div class="board-viewport">
           <div class="cards-grid" id="result-grid"></div>
@@ -205,7 +206,8 @@
           <span style="font-family:'IBM Plex Mono',monospace;font-size:13px;color:var(--text-secondary);">0 SET</span>
         </div>
 
-        <div style="text-align:center;font-size:12px;margin:12px 0;">12장 인식 완료 · 가능한 조합을 모두 확인했어요</div>
+        <div style="text-align:center;font-size:12px;margin:10px 0 4px;" id="empty-summary-line">12장 인식 완료 · 가능한 조합을 모두 확인했어요</div>
+        <div style="text-align:center;font-size:11px;color:var(--cyan-accent);margin-bottom:10px;">💡 잘못 인식된 카드는 터치해서 바로 속성을 수정할 수 있어요</div>
 
         <div class="board-viewport">
           <div class="cards-grid" id="empty-grid"></div>
@@ -267,6 +269,59 @@
         <button class="btn-primary" id="btn-scenario-3sets">03 탐지 결과 · 세트 존재 여부 (3 SETs)</button>
         <button class="btn-secondary" id="btn-scenario-0sets">05 예외 A · 세트 없음 (0 SET)</button>
         <button class="btn-secondary" id="btn-scenario-quality">05B 예외 B · 촬영 품질 경고</button>
+      </div>
+    </div>
+
+    <!-- 개별 카드 터치 즉시 수정 모달 -->
+    <div class="modal-backdrop" id="card-edit-modal">
+      <div class="modal-sheet">
+        <div style="display:flex;justify-content:space-between;align-items:center;">
+          <strong style="font-size:16px;" id="card-edit-title">카드 01 속성 수정</strong>
+          <button id="btn-close-card-edit" style="background:none;border:none;color:var(--text-secondary);font-size:20px;cursor:pointer;">✕</button>
+        </div>
+
+        <div style="display:flex;align-items:center;justify-content:center;padding:8px 0;" id="card-edit-preview"></div>
+
+        <div class="attr-group">
+          <span class="attr-label">개수 (Number)</span>
+          <div class="attr-options" data-attr="number">
+            <button type="button" class="attr-pill" data-val="1">1개</button>
+            <button type="button" class="attr-pill" data-val="2">2개</button>
+            <button type="button" class="attr-pill" data-val="3">3개</button>
+          </div>
+        </div>
+
+        <div class="attr-group">
+          <span class="attr-label">모양 (Shape)</span>
+          <div class="attr-options" data-attr="shape">
+            <button type="button" class="attr-pill" data-val="1">타원 (Oval)</button>
+            <button type="button" class="attr-pill" data-val="2">다이아 (Diamond)</button>
+            <button type="button" class="attr-pill" data-val="3">물결 (Squiggle)</button>
+          </div>
+        </div>
+
+        <div class="attr-group">
+          <span class="attr-label">색상 (Color)</span>
+          <div class="attr-options" data-attr="color">
+            <button type="button" class="attr-pill" data-val="1">🔴 빨강</button>
+            <button type="button" class="attr-pill" data-val="2">🟢 초록</button>
+            <button type="button" class="attr-pill" data-val="3">🟣 보라</button>
+          </div>
+        </div>
+
+        <div class="attr-group">
+          <span class="attr-label">채움 (Shading)</span>
+          <div class="attr-options" data-attr="shading">
+            <button type="button" class="attr-pill" data-val="1">채움 (Solid)</button>
+            <button type="button" class="attr-pill" data-val="2">빗금 (Striped)</button>
+            <button type="button" class="attr-pill" data-val="3">빈칸 (Open)</button>
+          </div>
+        </div>
+
+        <div style="display:flex;gap:8px;margin-top:4px;">
+          <button type="button" class="btn-secondary" id="btn-delete-card" style="width:104px;color:var(--rose-accent);border-color:rgba(244,63,94,0.4);">카드 삭제</button>
+          <button type="button" class="btn-primary" id="btn-save-card" style="flex:1;">적용 및 세트 재계산</button>
+        </div>
       </div>
     </div>
   </main>

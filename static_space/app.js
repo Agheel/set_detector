@@ -113,7 +113,15 @@
   }
 
   function createPlayingCardHtml(card, options = {}) {
-    const { badge, highlightColor, dimmed, width = 88, height = 80 } = options;
+    const {
+      badge,
+      highlightColor,
+      dimmed,
+      width = 88,
+      height = 80,
+      cardIndex = null,
+      editable = false,
+    } = options;
     const symbols = Array.from({ length: card.number }, () =>
       createSymbolSvg(card.shape, card.color, card.shading)
     ).join('');
@@ -125,13 +133,27 @@
     const badgeStyle = highlightColor
       ? `background:${highlightColor};border-color:${highlightColor};color:#0F172A;`
       : '';
+    const dataAttr =
+      cardIndex !== null ? `data-card-index="${cardIndex}" title="터치하여 카드 속성 수정"` : '';
 
     return `
-      <div class="card-slot" style="width:${width + 8}px;height:${height + 8}px;">
+      <div class="card-slot" ${dataAttr} style="width:${width + 8}px;height:${height + 8}px;">
         ${badge || highlightColor ? `<div class="card-bbox" style="width:${width + 8}px;height:${height + 8}px;${bboxStyle}"></div>` : ''}
         <div class="playing-card" style="width:${width}px;height:${height}px;">${symbols}</div>
         ${badge ? `<div class="card-badge" style="${badgeStyle}">${badge}</div>` : ''}
+        ${editable ? `<div class="card-edit-hint">✎</div>` : ''}
         ${dimmed ? `<div class="card-dim" style="width:${width + 12}px;height:${height + 12}px;"></div>` : ''}
+      </div>
+    `;
+  }
+
+  function createAddCardSlotHtml() {
+    return `
+      <div class="card-slot">
+        <button type="button" class="add-card-slot" data-add-card="true">
+          <span style="font-size:18px;line-height:1;">＋</span>
+          <span>카드 추가</span>
+        </button>
       </div>
     `;
   }
@@ -142,6 +164,8 @@
   let selectedSetIndex = 0;
   let twoCardHintOnly = false;
   let ortSession = null;
+  let editingCardIndex = 0;
+  let draftCard = { number: 1, shape: 1, color: 1, shading: 1 };
 
   // Render Screen 01 Illustration (#8:10930)
   function renderOnboardingIllustration() {
@@ -208,12 +232,17 @@
     // 03 Detection Result (existence only, no triangle spoilers)
     const resGrid = document.getElementById('result-grid');
     if (resGrid) {
-      resGrid.innerHTML = currentCards
+      const items = currentCards
         .slice(0, 12)
         .map((c, idx) =>
-          createPlayingCardHtml(c, { badge: String(idx + 1).padStart(2, '0') })
-        )
-        .join('');
+          createPlayingCardHtml(c, {
+            badge: String(idx + 1).padStart(2, '0'),
+            cardIndex: idx,
+            editable: true,
+          })
+        );
+      if (items.length < 12) items.push(createAddCardSlotHtml());
+      resGrid.innerHTML = items.join('');
     }
     const resLine = document.getElementById('result-summary-line');
     if (resLine) resLine.textContent = `${currentCards.length}장 분석 완료 · 세트 존재 여부 확인`;
@@ -221,13 +250,20 @@
     // 05 Empty Set
     const emptyGrid = document.getElementById('empty-grid');
     if (emptyGrid) {
-      emptyGrid.innerHTML = currentCards
+      const items = currentCards
         .slice(0, 12)
         .map((c, idx) =>
-          createPlayingCardHtml(c, { badge: String(idx + 1).padStart(2, '0') })
-        )
-        .join('');
+          createPlayingCardHtml(c, {
+            badge: String(idx + 1).padStart(2, '0'),
+            cardIndex: idx,
+            editable: true,
+          })
+        );
+      if (items.length < 12) items.push(createAddCardSlotHtml());
+      emptyGrid.innerHTML = items.join('');
     }
+    const emptyLine = document.getElementById('empty-summary-line');
+    if (emptyLine) emptyLine.textContent = `${currentCards.length}장 인식 완료 · 가능한 조합을 모두 확인했어요`;
 
     renderDetailScreen();
   }
@@ -259,6 +295,8 @@
           badge: String(idx + 1).padStart(2, '0'),
           highlightColor: focused ? color : null,
           dimmed: !focused,
+          cardIndex: idx,
+          editable: true,
         });
       })
       .join('');
@@ -629,8 +667,103 @@
 
     const modal = document.getElementById('scenario-modal');
     document.getElementById('btn-open-scenarios').addEventListener('click', () => modal.classList.add('open'));
-    document.getElementById('btn-manual-solver').addEventListener('click', () => modal.classList.add('open'));
+    document.getElementById('btn-manual-solver').addEventListener('click', () => {
+      showScreen(currentSets.length > 0 ? 'screen-03' : 'screen-05');
+      openCardEditModal(0);
+    });
     document.getElementById('btn-close-modal').addEventListener('click', () => modal.classList.remove('open'));
+
+    // Single-Card Tap-to-Edit Modal Logic
+    const editModal = document.getElementById('card-edit-modal');
+    const editTitle = document.getElementById('card-edit-title');
+    const editPreview = document.getElementById('card-edit-preview');
+    const deleteBtn = document.getElementById('btn-delete-card');
+
+    function syncCardEditUi() {
+      const label = String(editingCardIndex + 1).padStart(2, '0');
+      editTitle.textContent = `카드 ${label} 속성 수정`;
+      editPreview.innerHTML = createPlayingCardHtml(draftCard, {
+        badge: label,
+        highlightColor: '#06B6D4',
+        width: 108,
+        height: 92,
+      });
+      document.querySelectorAll('#card-edit-modal .attr-options').forEach((group) => {
+        const attr = group.getAttribute('data-attr');
+        group.querySelectorAll('.attr-pill').forEach((pill) => {
+          const val = parseInt(pill.getAttribute('data-val'), 10);
+          pill.classList.toggle('active', draftCard[attr] === val);
+        });
+      });
+      deleteBtn.disabled = currentCards.length <= 3;
+      deleteBtn.style.opacity = currentCards.length <= 3 ? '0.4' : '1';
+    }
+
+    function openCardEditModal(idx) {
+      editingCardIndex = idx;
+      const target = currentCards[idx] || { number: 1, shape: 1, color: 1, shading: 1 };
+      draftCard = { ...target };
+      syncCardEditUi();
+      editModal.classList.add('open');
+    }
+
+    ['result-grid', 'detail-grid', 'empty-grid'].forEach((gridId) => {
+      const gridEl = document.getElementById(gridId);
+      if (!gridEl) return;
+      gridEl.addEventListener('click', (e) => {
+        const addBtn = e.target.closest('[data-add-card]');
+        if (addBtn && currentCards.length < 12) {
+          currentCards.push({ number: 1, shape: 1, color: 1, shading: 1 });
+          openCardEditModal(currentCards.length - 1);
+          return;
+        }
+        const slot = e.target.closest('[data-card-index]');
+        if (!slot) return;
+        const idx = parseInt(slot.getAttribute('data-card-index'), 10);
+        if (!Number.isNaN(idx)) openCardEditModal(idx);
+      });
+    });
+
+    document.querySelectorAll('#card-edit-modal .attr-options').forEach((group) => {
+      const attr = group.getAttribute('data-attr');
+      group.querySelectorAll('.attr-pill').forEach((pill) => {
+        pill.addEventListener('click', () => {
+          draftCard[attr] = parseInt(pill.getAttribute('data-val'), 10);
+          syncCardEditUi();
+        });
+      });
+    });
+
+    document.getElementById('btn-close-card-edit').addEventListener('click', () => {
+      editModal.classList.remove('open');
+    });
+
+    document.getElementById('btn-save-card').addEventListener('click', () => {
+      currentCards[editingCardIndex] = { ...draftCard };
+      currentSets = findSets(currentCards);
+      if (selectedSetIndex >= currentSets.length) selectedSetIndex = 0;
+      editModal.classList.remove('open');
+      renderAllBoards();
+      const activeScreen = document.querySelector('.screen.active');
+      const activeId = activeScreen ? activeScreen.id : 'screen-03';
+      if (currentSets.length === 0) {
+        showScreen('screen-05');
+      } else if (activeId === 'screen-05') {
+        showScreen('screen-03');
+      } else if (activeId === 'screen-04') {
+        showScreen('screen-04');
+      }
+    });
+
+    deleteBtn.addEventListener('click', () => {
+      if (currentCards.length <= 3) return;
+      currentCards.splice(editingCardIndex, 1);
+      currentSets = findSets(currentCards);
+      selectedSetIndex = 0;
+      editModal.classList.remove('open');
+      renderAllBoards();
+      showScreen(currentSets.length > 0 ? 'screen-03' : 'screen-05');
+    });
 
     document.getElementById('btn-scenario-3sets').addEventListener('click', () => {
       modal.classList.remove('open');
